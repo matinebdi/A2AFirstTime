@@ -1,0 +1,196 @@
+services:
+  # Note: Using existing Oracle container (oracle-xe) on host network
+  # Redis for A2A messaging
+  redis:
+    image: redis:7-alpine
+    container_name: a2a-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - a2a-network
+    restart: unless-stopped
+
+  # Orchestrator Agent (main coordinator)
+  orchestrator:
+    build:
+      context: ./agents/orchestrator
+      dockerfile: Dockerfile
+    container_name: a2a-orchestrator
+    ports:
+      - "${ORCHESTRATOR_PORT:-8000}:8000"
+    environment:
+      - ORACLE_USER=${ORACLE_USER}
+      - ORACLE_PASSWORD=${ORACLE_PASSWORD}
+      - ORACLE_HOST=host.docker.internal
+      - ORACLE_PORT=1521
+      - ORACLE_SERVICE=${ORACLE_SERVICE}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DEBUG=${DEBUG:-true}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - AGENT_NAME=orchestrator
+    volumes:
+      - ./agents/orchestrator/app:/app/app
+      - ./shared:/app/shared
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - a2a-network
+    restart: unless-stopped
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Decision Agent (AI brain)
+  decision:
+    build:
+      context: ./agents/decision
+      dockerfile: Dockerfile
+    container_name: a2a-decision
+    ports:
+      - "${DECISION_PORT:-8001}:8001"
+    environment:
+      - ORACLE_USER=${ORACLE_USER}
+      - ORACLE_PASSWORD=${ORACLE_PASSWORD}
+      - ORACLE_HOST=host.docker.internal
+      - ORACLE_PORT=1521
+      - ORACLE_SERVICE=${ORACLE_SERVICE}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - DEBUG=${DEBUG:-true}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - AGENT_NAME=decision
+    volumes:
+      - ./agents/decision/app:/app/app
+      - ./shared:/app/shared
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - a2a-network
+    restart: unless-stopped
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
+
+  # Vision Agent (UI analysis)
+  vision:
+    build:
+      context: ./agents/vision
+      dockerfile: Dockerfile
+    container_name: a2a-vision
+    ports:
+      - "${VISION_PORT:-8002}:8002"
+    environment:
+      - ORACLE_USER=${ORACLE_USER}
+      - ORACLE_PASSWORD=${ORACLE_PASSWORD}
+      - ORACLE_HOST=host.docker.internal
+      - ORACLE_PORT=1521
+      - ORACLE_SERVICE=${ORACLE_SERVICE}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - DEBUG=${DEBUG:-true}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - AGENT_NAME=vision
+    volumes:
+      - ./agents/vision/app:/app/app
+      - ./shared:/app/shared
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - a2a-network
+    restart: unless-stopped
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload
+
+  # Form Agent (form filling with DB)
+  form:
+    build:
+      context: ./agents/form
+      dockerfile: Dockerfile
+    container_name: a2a-form
+    ports:
+      - "${FORM_PORT:-8003}:8003"
+    environment:
+      - ORACLE_USER=${ORACLE_USER}
+      - ORACLE_PASSWORD=${ORACLE_PASSWORD}
+      - ORACLE_HOST=host.docker.internal
+      - ORACLE_PORT=1521
+      - ORACLE_SERVICE=${ORACLE_SERVICE}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DEBUG=${DEBUG:-true}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - AGENT_NAME=form
+    volumes:
+      - ./agents/form/app:/app/app
+      - ./shared:/app/shared
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - a2a-network
+    restart: unless-stopped
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8003 --reload
+
+  # Validation Agent (action verification)
+  validation:
+    build:
+      context: ./agents/validation
+      dockerfile: Dockerfile
+    container_name: a2a-validation
+    ports:
+      - "${VALIDATION_PORT:-8004}:8004"
+    environment:
+      - ORACLE_USER=${ORACLE_USER}
+      - ORACLE_PASSWORD=${ORACLE_PASSWORD}
+      - ORACLE_HOST=host.docker.internal
+      - ORACLE_PORT=1521
+      - ORACLE_SERVICE=${ORACLE_SERVICE}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DEBUG=${DEBUG:-true}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - AGENT_NAME=validation
+    volumes:
+      - ./agents/validation/app:/app/app
+      - ./shared:/app/shared
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - a2a-network
+    restart: unless-stopped
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8004 --reload
+
+  # Frontend (React Dashboard)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: a2a-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - a2a-network
+    restart: unless-stopped
+    environment:
+      - VITE_API_URL=http://localhost:8000
+
+networks:
+  a2a-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+    driver: local
