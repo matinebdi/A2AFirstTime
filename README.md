@@ -268,6 +268,8 @@ python scripts/seed_oracle.py
 |---------|-----|-------------|
 | Frontend | http://localhost:5173 | Application React |
 | Backend API | http://localhost:8080 | API FastAPI |
+| Swagger UI | http://localhost:8080/swagger | Documentation API interactive |
+| ReDoc | http://localhost:8080/redoc | Documentation API (alternative) |
 | Jaeger UI | http://localhost:16686 | Traces OpenTelemetry |
 | Oracle | localhost:1521/XE | Base de données |
 
