@@ -1,6 +1,6 @@
 # VacanceAI - Plateforme de Réservation de Vacances
 
-Application complète de réservation de vacances avec assistant IA, intégration TripAdvisor et architecture microservices.
+Application complète de réservation de vacances avec assistant IA, intégration TripAdvisor et protocole Agent-to-Agent (A2A).
 
 ---
 
@@ -29,8 +29,8 @@ Application complète de réservation de vacances avec assistant IA, intégratio
 - Un catalogue de packages vacances tout compris
 - Des données hotels en temps réel via TripAdvisor
 - Un assistant IA intelligent (Google Gemini)
-- Une recherche sémantique via RAG (pgvector)
 - Une architecture Agent-to-Agent (A2A) pour l'orchestration IA
+- Authentification JWT custom avec refresh tokens
 
 ---
 
@@ -46,10 +46,9 @@ Application complète de réservation de vacances avec assistant IA, intégratio
 
 ### Pour les développeurs
 - API REST complète
-- Architecture microservices
 - Protocole A2A pour communication inter-agents
-- Base de données PostgreSQL avec Row Level Security
-- Recherche vectorielle (embeddings)
+- Base de données Oracle 21c XE
+- Observabilité avec OpenTelemetry + Jaeger
 
 ---
 
@@ -59,10 +58,10 @@ Application complète de réservation de vacances avec assistant IA, intégratio
 |--------|--------------|
 | **Frontend** | React 18, TypeScript, Vite, Tailwind CSS |
 | **Backend** | Python 3.12, FastAPI, Uvicorn |
-| **Base de données** | Supabase (PostgreSQL 15), pgvector |
-| **IA** | Google Gemini, LangChain, LangGraph |
-| **Auth** | Supabase Auth (JWT) |
-| **Storage** | Supabase Storage (S3-compatible) |
+| **Base de données** | Oracle 21c XE |
+| **IA** | Google Gemini |
+| **Auth** | JWT custom (PyJWT + passlib bcrypt) |
+| **Observabilité** | OpenTelemetry, Jaeger |
 | **Conteneurisation** | Docker, Docker Compose |
 
 ---
@@ -71,7 +70,7 @@ Application complète de réservation de vacances avec assistant IA, intégratio
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                         FRONTEND                                 │
+│                         FRONTEND                                │
 │                    React + TypeScript                            │
 │                    localhost:5173                                │
 └─────────────────────────┬───────────────────────────────────────┘
@@ -86,16 +85,16 @@ Application complète de réservation de vacances avec assistant IA, intégratio
 │  └──────────────┘  └──────────────┘  │  Database    │          │
 │                                       │  UI          │          │
 │                                       └──────────────┘          │
-└─────────────────────────┬───────────────────────────────────────┘
-                          │ PostgreSQL
-┌─────────────────────────▼───────────────────────────────────────┐
-│                        SUPABASE                                  │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
-│  │  PostgreSQL  │  │    Auth      │  │   Storage    │          │
-│  │  + pgvector  │  │    JWT       │  │   (Images)   │          │
-│  └──────────────┘  └──────────────┘  └──────────────┘          │
-│                    localhost:54321                               │
-└─────────────────────────────────────────────────────────────────┘
+└───────────┬───────────────────────────────────┬─────────────────┘
+            │ oracledb (thin mode)              │ OTLP
+┌───────────▼───────────────┐    ┌──────────────▼─────────────────┐
+│       ORACLE 21c XE       │    │           JAEGER               │
+│  ┌──────────────────────┐ │    │    Traces OpenTelemetry        │
+│  │  Schema VACANCEAI    │ │    │    localhost:16686              │
+│  │  11 tables + triggers│ │    └────────────────────────────────┘
+│  └──────────────────────┘ │
+│       localhost:1521      │
+└───────────────────────────┘
 ```
 
 ### Structure des dossiers
@@ -106,13 +105,14 @@ ui-automation-a2a/
 │   ├── api/
 │   │   ├── main.py                 # Point d'entrée FastAPI
 │   │   └── routes/
-│   │       ├── auth.py             # Authentification
+│   │       ├── auth.py             # Authentification (JWT)
 │   │       ├── packages.py         # Packages vacances
 │   │       ├── bookings.py         # Réservations
 │   │       ├── favorites.py        # Favoris
 │   │       ├── reviews.py          # Avis
 │   │       ├── destinations.py     # Destinations
 │   │       ├── conversations.py    # Chat IA
+│   │       ├── tripadvisor.py      # Données TripAdvisor
 │   │       └── health.py           # Health check
 │   ├── agents/
 │   │   ├── base.py                 # Classe agent de base
@@ -124,11 +124,15 @@ ui-automation-a2a/
 │   │   ├── client.py               # Client A2A
 │   │   └── server.py               # Serveur A2A
 │   ├── auth/
-│   │   └── middleware.py           # Middleware JWT
+│   │   ├── jwt_service.py          # Service JWT (PyJWT + bcrypt)
+│   │   └── middleware.py           # Middleware auth
 │   ├── database/
-│   │   └── supabase_client.py      # Client Supabase
-│   ├── config.py                   # Configuration
-│   ├── requirements.txt            # Dépendances Python
+│   │   ├── oracle_client.py        # Client Oracle (oracledb thin)
+│   │   ├── oracle_schema.sql       # Schéma complet (11 tables)
+│   │   └── queries.py              # Requêtes SQL centralisées
+│   ├── config.py                   # Configuration (pydantic-settings)
+│   ├── telemetry.py                # OpenTelemetry setup
+│   ├── requirements.txt
 │   └── Dockerfile
 │
 ├── frontend/
@@ -138,7 +142,8 @@ ui-automation-a2a/
 │   │   │   │   ├── Header.tsx      # Navigation
 │   │   │   │   └── Footer.tsx      # Pied de page
 │   │   │   ├── chat/
-│   │   │   │   └── ChatWidget.tsx  # Widget chatbot
+│   │   │   │   ├── ChatWidget.tsx  # Widget chatbot
+│   │   │   │   └── ChatErrorBoundary.tsx
 │   │   │   ├── packages/
 │   │   │   │   └── PackageCard.tsx # Carte package
 │   │   │   └── Layout.tsx          # Layout principal
@@ -151,14 +156,16 @@ ui-automation-a2a/
 │   │   │   └── SignUp.tsx          # Inscription
 │   │   ├── services/
 │   │   │   ├── api.ts              # Client API backend
-│   │   │   ├── supabase.ts         # Client Supabase
 │   │   │   └── tripadvisor.ts      # Service TripAdvisor
 │   │   ├── contexts/
-│   │   │   └── AuthContext.tsx     # Context auth
+│   │   │   └── AuthContext.tsx     # Context auth (localStorage)
 │   │   ├── hooks/
 │   │   │   └── useChat.ts          # Hook chat
 │   │   ├── types/
 │   │   │   └── index.ts            # Types TypeScript
+│   │   ├── utils/
+│   │   │   ├── telemetry.ts        # OpenTelemetry frontend
+│   │   │   └── uuid.ts             # UUID helpers
 │   │   ├── App.tsx                 # Routes
 │   │   ├── main.tsx                # Entry point
 │   │   └── index.css               # Styles Tailwind
@@ -168,20 +175,16 @@ ui-automation-a2a/
 │   ├── tsconfig.json
 │   └── Dockerfile
 │
-├── supabase/
-│   ├── config.toml                 # Config Supabase
-│   └── migrations/
-│       ├── 20260115000000_initial_schema.sql
-│       └── 20260116000000_tripadvisor_import.sql
-│
 ├── scripts/
-│   └── tripadvise.ipynb            # Script import TripAdvisor
+│   ├── tripadvise.ipynb            # Script import TripAdvisor
+│   ├── seed_oracle.py              # Seed données Oracle
+│   └── scraper/data/seed_data.sql  # Données de seed SQL
 │
 ├── .env                            # Variables d'environnement
 ├── .gitignore
 ├── compose.yaml                    # Docker Compose
 ├── CLAUDE.md                       # Instructions Claude Code
-└── README.md                       # Ce fichier
+└── README.md
 ```
 
 ---
@@ -191,37 +194,20 @@ ui-automation-a2a/
 ### Prérequis
 
 - **Docker Desktop** (v24+)
-- **Node.js** (v20+)
 - **Git**
 
 ### Étape 1 : Cloner le repository
 
 ```bash
-git clone <repository-url>
-cd ui-automation-a2a
+git clone https://github.com/matinebdi/A2AFirstTime.git
+cd A2AFirstTime
 ```
 
-### Étape 2 : Installer Supabase CLI
+### Étape 2 : Créer le volume Oracle
 
 ```bash
-npm install -g supabase
+docker volume create oracle-xe-data
 ```
-
-### Étape 3 : Démarrer Supabase local
-
-```bash
-npx supabase start
-```
-
-Attendre que tous les services démarrent (~2 minutes la première fois).
-
-### Étape 4 : Récupérer les clés
-
-```bash
-npx supabase status
-```
-
-Copier les valeurs `anon key` et `service_role key`.
 
 ---
 
@@ -234,15 +220,15 @@ Créer un fichier `.env` à la racine du projet :
 # VacanceAI - Environment Variables
 # =============================================
 
-# Supabase Local (from: npx supabase status)
-SUPABASE_URL=http://127.0.0.1:54321
+# Oracle Database
+ORACLE_USER=VACANCEAI
+ORACLE_PASSWORD=vacanceai
 
-# Authentication Keys
-ANON_KEY=<votre_anon_key>
-SERVICE_ROLE_KEY=<votre_service_role_key>
-
-# Database
-DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres
+# JWT Auth
+JWT_SECRET_KEY=your-secret-key-change-in-production
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=60
+REFRESH_TOKEN_EXPIRE_DAYS=30
 
 # Google AI (Gemini)
 GOOGLE_API_KEY=<votre_gemini_api_key>
@@ -255,14 +241,25 @@ GOOGLE_API_KEY=<votre_gemini_api_key>
 ### Avec Docker (recommandé)
 
 ```bash
-# Appliquer les migrations
-npx supabase db reset
-
-# Construire et lancer
+# Construire et lancer (Oracle + Jaeger + Backend + Frontend)
 docker compose up --build
 
 # Ou en arrière-plan
 docker compose up -d --build
+```
+
+> **Note** : Le premier lancement d'Oracle peut prendre ~2 minutes. Le backend attend que Oracle soit healthy avant de démarrer.
+
+### Initialiser la base de données
+
+Exécuter le schéma SQL dans Oracle :
+
+```bash
+# Se connecter à Oracle et exécuter le schéma
+docker exec -i oracle-xe sqlplus SYS/admin@//localhost:1521/XE as SYSDBA < backend/database/oracle_schema.sql
+
+# Puis seed les données
+python scripts/seed_oracle.py
 ```
 
 ### URLs disponibles
@@ -271,8 +268,8 @@ docker compose up -d --build
 |---------|-----|-------------|
 | Frontend | http://localhost:5173 | Application React |
 | Backend API | http://localhost:8080 | API FastAPI |
-| Supabase Studio | http://localhost:54323 | Admin DB |
-| Supabase API | http://localhost:54321 | API Supabase |
+| Jaeger UI | http://localhost:16686 | Traces OpenTelemetry |
+| Oracle | localhost:1521/XE | Base de données |
 
 ### Commandes Docker
 
@@ -298,106 +295,95 @@ docker compose restart
 
 ## Base de données
 
-### Schéma principal
+### Oracle 21c XE
+
+- **User** : `VACANCEAI` / `vacanceai`
+- **Schema** : `backend/database/oracle_schema.sql` (11 tables + triggers)
+- **Client** : `oracledb` en mode thin (pas d'Oracle Instant Client requis)
+- **Connection pool** : géré via `backend/database/oracle_client.py`
+
+### Conventions Oracle
+
+| PostgreSQL (ancien) | Oracle (actuel) |
+|---------------------|-----------------|
+| `BOOLEAN` | `NUMBER(1)` |
+| `UUID` | `VARCHAR2(36)` + `SYS_GUID()` |
+| `JSONB` | `CLOB` avec contrainte `IS JSON` |
+| `TEXT[]` | `CLOB` (JSON array) |
+| `SERIAL` | Triggers + sequences |
+| `LIMIT/OFFSET` | `OFFSET :n ROWS FETCH NEXT :m ROWS ONLY` |
+
+### Tables principales
 
 #### `destinations`
 | Colonne | Type | Description |
 |---------|------|-------------|
-| id | UUID | Identifiant unique |
-| name | TEXT | Nom de la destination |
-| country | TEXT | Pays |
-| city | TEXT | Ville |
-| description | TEXT | Description |
-| image_url | TEXT | Image principale |
-| tags | TEXT[] | Tags (plage, montagne...) |
-| average_rating | DECIMAL | Note moyenne |
+| id | VARCHAR2(36) | UUID (SYS_GUID) |
+| name | VARCHAR2(255) | Nom de la destination |
+| country | VARCHAR2(100) | Pays |
+| city | VARCHAR2(100) | Ville |
+| description | CLOB | Description |
+| image_url | VARCHAR2(500) | Image principale |
+| tags | CLOB (JSON) | Tags (plage, montagne...) |
+| average_rating | NUMBER(3,2) | Note moyenne |
 
 #### `packages`
 | Colonne | Type | Description |
 |---------|------|-------------|
-| id | UUID | Identifiant unique |
-| destination_id | UUID | FK destination |
-| name | TEXT | Nom du package |
-| description | TEXT | Description |
-| duration_days | INT | Durée en jours |
-| price_per_person | DECIMAL | Prix par personne |
-| max_persons | INT | Nombre max de personnes |
-| includes | JSONB | Ce qui est inclus |
-| available_from | DATE | Disponible à partir de |
-| available_to | DATE | Disponible jusqu'à |
-| is_active | BOOLEAN | Actif ou non |
-| images | TEXT[] | URLs des images |
+| id | VARCHAR2(36) | UUID |
+| destination_id | VARCHAR2(36) | FK destination |
+| name | VARCHAR2(255) | Nom du package |
+| description | CLOB | Description |
+| duration_days | NUMBER | Durée en jours |
+| price_per_person | NUMBER(10,2) | Prix par personne |
+| max_persons | NUMBER | Nombre max de personnes |
+| includes | CLOB (JSON) | Ce qui est inclus |
+| is_active | NUMBER(1) | Actif ou non |
+| images | CLOB (JSON) | URLs des images |
 
 #### `bookings`
 | Colonne | Type | Description |
 |---------|------|-------------|
-| id | UUID | Identifiant unique |
-| user_id | UUID | FK utilisateur |
-| package_id | UUID | FK package |
-| status | TEXT | pending/confirmed/cancelled/completed |
+| id | VARCHAR2(36) | UUID |
+| user_id | VARCHAR2(36) | FK utilisateur |
+| package_id | VARCHAR2(36) | FK package |
+| status | VARCHAR2(20) | pending/confirmed/cancelled/completed |
 | start_date | DATE | Date de début |
 | end_date | DATE | Date de fin |
-| num_persons | INT | Nombre de personnes |
-| total_price | DECIMAL | Prix total |
-| payment_status | TEXT | unpaid/paid/refunded |
+| num_persons | NUMBER | Nombre de personnes |
+| total_price | NUMBER(10,2) | Prix total |
+| payment_status | VARCHAR2(20) | unpaid/paid/refunded |
 
 ### Tables TripAdvisor
 
 #### `tripadvisor_locations`
 | Colonne | Type | Description |
 |---------|------|-------------|
-| id | UUID | Identifiant unique |
-| location_id | TEXT | ID TripAdvisor |
-| name | TEXT | Nom de l'hotel |
-| address_obj | JSONB | Adresse complète |
-| search_country | TEXT | Pays de recherche |
-| category | TEXT | hotels/restaurants/attractions |
+| id | VARCHAR2(36) | UUID |
+| location_id | VARCHAR2(50) | ID TripAdvisor |
+| name | VARCHAR2(255) | Nom de l'hotel |
+| address_obj | CLOB (JSON) | Adresse complète |
+| search_country | VARCHAR2(100) | Pays de recherche |
+| category | VARCHAR2(50) | hotels/restaurants/attractions |
 
-#### `tripadvisor_photos`
-| Colonne | Type | Description |
-|---------|------|-------------|
-| id | UUID | Identifiant unique |
-| location_id | TEXT | FK location |
-| photo_id | TEXT | ID photo TripAdvisor |
-| url_original | TEXT | URL originale |
-| url_large | TEXT | URL grande taille |
-| url_medium | TEXT | URL moyenne taille |
-| url_small | TEXT | URL petite taille |
-| caption | TEXT | Légende |
-| storage_path | TEXT | Chemin Supabase Storage |
-
-#### `tripadvisor_reviews`
-| Colonne | Type | Description |
-|---------|------|-------------|
-| id | UUID | Identifiant unique |
-| location_id | TEXT | FK location |
-| review_id | TEXT | ID review TripAdvisor |
-| rating | INT | Note (1-5) |
-| title | TEXT | Titre |
-| text | TEXT | Contenu |
-| published_date | TEXT | Date de publication |
-| user_name | TEXT | Nom de l'auteur |
-
-### Row Level Security (RLS)
-
-- **Destinations & Packages** : Lecture publique
-- **Bookings & Favorites** : L'utilisateur accède uniquement à ses données
-- **Reviews** : Lecture publique, création authentifiée
-- **Conversations** : L'utilisateur accède uniquement à ses conversations
-- **TripAdvisor** : Lecture publique
+#### `tripadvisor_photos` / `tripadvisor_reviews`
+Mêmes structures avec URLs des images et données d'avis.
 
 ---
 
 ## API Backend
 
-### Authentification
+### Authentification (JWT custom)
 
 ```
-POST /api/auth/signup
-POST /api/auth/login
-POST /api/auth/logout
-GET  /api/auth/me
+POST /api/auth/signup          # Inscription
+POST /api/auth/login           # Connexion → access_token + refresh_token
+POST /api/auth/refresh         # Renouveler le token
+POST /api/auth/logout          # Déconnexion
+GET  /api/auth/me              # Profil utilisateur
 ```
+
+Les tokens sont stockés dans `localStorage` côté frontend. Les refresh tokens sont stockés en base dans la table `refresh_tokens` et rotés à chaque refresh.
 
 ### Destinations
 
@@ -441,6 +427,15 @@ DELETE /api/favorites/{package_id}    # Supprimer
 GET    /api/favorites/check/{id}      # Vérifier si favori
 ```
 
+### TripAdvisor
+
+```
+GET /api/tripadvisor/locations        # Hotels
+GET /api/tripadvisor/locations/{id}   # Détails hotel
+GET /api/tripadvisor/photos/{id}      # Photos
+GET /api/tripadvisor/reviews/{id}     # Avis
+```
+
 ### Conversations (Chat IA)
 
 ```
@@ -481,7 +476,6 @@ GET /api/health    # Status de l'API
 ### Services
 
 - **api.ts** : Client Axios pour le backend
-- **supabase.ts** : Client Supabase direct
 - **tripadvisor.ts** : Service données TripAdvisor
 
 ---
@@ -490,46 +484,14 @@ GET /api/health    # Status de l'API
 
 ### Prérequis
 
-- Clé API TripAdvisor Content API
+- Clé API TripAdvisor Content API (variable d'env `TRIPADVISOR_API_KEY`)
 - Jupyter ou VS Code avec extension Jupyter
 
 ### Exécution
 
 1. Ouvrir `scripts/tripadvise.ipynb`
-
-2. **Cellule 1** : Importer les hotels
-   - Configure la liste des pays
-   - Fetch les hotels via l'API
-   - Résultat : DataFrame `df`
-
-3. **Cellule 2** : Importer les photos
-   - Boucle sur les `location_id`
-   - Résultat : DataFrame `df_photos`
-
-4. **Cellule 3** : Importer les reviews
-   - Boucle sur les `location_id`
-   - Résultat : DataFrame `df_reviews`
-
-5. **Cellule 4** : Connexion Supabase
-   - Initialise le client
-
-6. **Cellule 5-7** : Insert dans Supabase
-   - Insert locations, photos, reviews
-
-7. **Cellule 8** (optionnel) : Upload images
-   - Télécharge et stocke dans Supabase Storage
-
-### Headers requis
-
-L'API TripAdvisor nécessite ces headers :
-
-```python
-headers = {
-    "accept": "application/json",
-    "Referer": "https://tripadvisor-content-api.readme.io/",
-    "Origin": "https://tripadvisor-content-api.readme.io"
-}
-```
+2. Définir les variables d'environnement (`TRIPADVISOR_API_KEY`, `SUPABASE_SERVICE_KEY`)
+3. Exécuter les cellules dans l'ordre : fetch hotels → photos → reviews → insert en base
 
 ---
 
@@ -542,7 +504,7 @@ Le backend utilise le protocole Agent-to-Agent (A2A) de Google pour la coordinat
 | Agent | Description |
 |-------|-------------|
 | **Orchestrator** | Coordonne les autres agents |
-| **Database** | Requêtes Supabase |
+| **Database** | Requêtes Oracle |
 | **UI** | Actions interface utilisateur |
 
 ### Endpoints A2A
@@ -553,28 +515,6 @@ POST /a2a/tasks                  # Créer une tâche
 GET  /a2a/tasks/{id}            # Status d'une tâche
 POST /a2a/tasks/{id}/messages   # Envoyer un message
 POST /a2a/tasks/{id}/cancel     # Annuler une tâche
-```
-
-### Agent Card
-
-```json
-{
-  "name": "vacanceai-orchestrator",
-  "description": "VacanceAI main orchestrator agent",
-  "url": "http://localhost:8080",
-  "version": "1.0.0",
-  "capabilities": {
-    "streaming": true,
-    "push_notifications": false
-  },
-  "skills": [
-    {
-      "id": "search_packages",
-      "name": "Search Packages",
-      "description": "Search vacation packages"
-    }
-  ]
-}
 ```
 
 ---
@@ -596,7 +536,7 @@ source venv/bin/activate  # Linux/Mac
 # Installer dépendances
 pip install -r requirements.txt
 
-# Lancer
+# Lancer (Oracle doit tourner sur localhost:1521)
 uvicorn api.main:app --reload --port 8000
 ```
 
@@ -612,26 +552,6 @@ npm install
 npm run dev
 ```
 
-### Tests
-
-```bash
-# Backend
-cd backend
-pytest
-
-# Frontend
-cd frontend
-npm run test
-```
-
-### Linting
-
-```bash
-# Frontend
-cd frontend
-npm run lint
-```
-
 ---
 
 ## Troubleshooting
@@ -643,11 +563,17 @@ docker compose down
 docker compose up --build
 ```
 
-### Erreur Supabase 502
+### Oracle ne démarre pas
 
 ```bash
-npx supabase stop
-npx supabase start
+# Vérifier que le volume existe
+docker volume ls | grep oracle-xe-data
+
+# Créer si manquant
+docker volume create oracle-xe-data
+
+# Vérifier les logs
+docker compose logs oracle
 ```
 
 ### Erreur CORS
@@ -658,9 +584,7 @@ Vérifier que `FRONTEND_URL` dans compose.yaml correspond à l'URL du frontend.
 
 ```bash
 docker compose down -v
-npx supabase stop
-npx supabase start
-npx supabase db reset
+docker volume create oracle-xe-data
 docker compose up --build
 ```
 
