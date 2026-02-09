@@ -378,11 +378,12 @@ Mêmes structures avec URLs des images et données d'avis.
 ### Authentification (JWT custom)
 
 ```
-POST /api/auth/signup          # Inscription
-POST /api/auth/login           # Connexion → access_token + refresh_token
-POST /api/auth/refresh         # Renouveler le token
-POST /api/auth/logout          # Déconnexion
-GET  /api/auth/me              # Profil utilisateur
+POST  /api/auth/signup          # Inscription
+POST  /api/auth/login           # Connexion → access_token + refresh_token
+POST  /api/auth/refresh         # Renouveler le token
+POST  /api/auth/logout          # Déconnexion
+GET   /api/auth/me              # Profil utilisateur
+PATCH /api/auth/me              # Modifier le profil
 ```
 
 Les tokens sont stockés dans `localStorage` côté frontend. Les refresh tokens sont stockés en base dans la table `refresh_tokens` et rotés à chaque refresh.
@@ -492,7 +493,7 @@ GET /api/health    # Status de l'API
 ### Exécution
 
 1. Ouvrir `scripts/tripadvise.ipynb`
-2. Définir les variables d'environnement (`TRIPADVISOR_API_KEY`, `SUPABASE_SERVICE_KEY`)
+2. Définir la variable d'environnement `TRIPADVISOR_API_KEY`
 3. Exécuter les cellules dans l'ordre : fetch hotels → photos → reviews → insert en base
 
 ---
@@ -538,7 +539,8 @@ source venv/bin/activate  # Linux/Mac
 # Installer dépendances
 pip install -r requirements.txt
 
-# Lancer (Oracle doit tourner sur localhost:1521)
+# Lancer sur port 8000 (Oracle doit tourner sur localhost:1521)
+# Note : en Docker, le port 8000 est mappé sur 8080 (compose.yaml)
 uvicorn api.main:app --reload --port 8000
 ```
 
