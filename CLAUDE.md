@@ -4,193 +4,274 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**VacanceAI** is a vacation booking platform with an AI-powered chatbot assistant. The application allows users to browse vacation packages, make bookings, leave reviews, and interact with an intelligent assistant that can help find the perfect vacation.
+**VacanceAI** is a vacation booking platform with an AI-powered chatbot assistant. The application allows users to browse vacation packages, make bookings, leave reviews, and interact with an intelligent assistant that can help find the perfect vacation. The AI agent has full page context awareness and can act on displayed data.
 
 ## Tech Stack
 
-- **Backend**: Python/FastAPI
-- **Frontend**: React + TypeScript + Vite
-- **Database**: Supabase (PostgreSQL + Auth + Row Level Security)
-- **AI**: Google Gemini + pgvector for RAG (Retrieval Augmented Generation)
-- **Containerization**: Docker Compose
+- **Backend**: Python 3.12 / FastAPI / Uvicorn
+- **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS
+- **Database**: Oracle 21c XE (oracledb thin mode, connection pool)
+- **AI**: Google Gemini 2.0 Flash (LangChain + LangGraph)
+- **Auth**: Custom JWT (PyJWT + passlib bcrypt)
+- **Observability**: OpenTelemetry + Jaeger
+- **Containerization**: Docker Compose (Oracle DB) + Kubernetes (app)
+
+## Architecture
+
+```
+Kubernetes (namespace: vacanceai)
+  Ingress NGINX (localhost:80)
+    /api/* -> backend:8000
+    /*     -> frontend:80 (nginx)
+  Jaeger (traces) -> :16686 (NodePort 31686)
+
+Docker Compose
+  Oracle 21c XE -> localhost:1521/XE
+  Backend connects via host.docker.internal:1521
+```
 
 ## Development Commands
 
 ```bash
-# Start Supabase locally (required first)
-npx supabase start
-
-# Start backend + frontend with Docker Compose
-docker compose up
-
-# Start in detached mode
+# Start Oracle (required first)
 docker compose up -d
 
-# Stop all services
-docker compose down
+# Build images
+docker build -t vacanceai-backend ./backend
+docker build -t vacanceai-frontend -f frontend/Dockerfile.prod ./frontend
+
+# Deploy to Kubernetes
+kubectl apply -f k8s/
+
+# Restart after code changes
+docker build -t vacanceai-backend ./backend && kubectl rollout restart deploy/backend -n vacanceai
+docker build -t vacanceai-frontend -f frontend/Dockerfile.prod ./frontend && kubectl rollout restart deploy/frontend -n vacanceai
 
 # View logs
-docker compose logs -f backend
-docker compose logs -f frontend
+kubectl logs -n vacanceai deploy/backend -f
+kubectl logs -n vacanceai deploy/frontend -f
 
-# Run backend locally (without Docker)
+# Run backend locally (without Docker/K8s)
 cd backend && uvicorn api.main:app --reload --port 8000
 
-# Run frontend locally (without Docker)
+# Run frontend locally (without Docker/K8s)
 cd frontend && npm install && npm run dev
 ```
 
-### Ports
+### URLs (Kubernetes)
 
-- **Backend API**: http://localhost:8080
+- **Frontend**: http://localhost
+- **Backend API**: http://localhost/api/health
+- **Swagger**: http://localhost/swagger
+- **ReDoc**: http://localhost/redoc
+- **Jaeger UI**: http://localhost:31686
+- **Oracle**: localhost:1521/XE
+
+### URLs (Local dev)
+
+- **Backend**: http://localhost:8000
 - **Frontend**: http://localhost:5173
-- **Supabase Studio**: http://localhost:54323
-- **Supabase API**: http://localhost:54321
 
-## Architecture
-
-### Backend Structure
+## Backend Structure
 
 ```
 backend/
 ├── api/
-│   ├── main.py              # FastAPI app entry point
+│   ├── main.py                 # FastAPI app entry point
 │   └── routes/
-│       ├── auth.py          # Authentication endpoints
-│       ├── destinations.py  # Destinations CRUD
-│       ├── packages.py      # Vacation packages CRUD
-│       ├── bookings.py      # User bookings
-│       ├── favorites.py     # User favorites
-│       ├── reviews.py       # Package reviews
-│       ├── conversations.py # AI chat conversations
-│       └── health.py        # Health check
-├── agents/                  # A2A Protocol agents
-│   ├── base.py              # Base agent class
-│   ├── orchestrator/        # Main coordinator agent
-│   ├── database/            # Database query agent
-│   └── ui/                  # UI automation agent
-├── a2a/                     # Agent-to-Agent protocol
-│   ├── protocol.py          # Message schemas
-│   ├── client.py            # A2A client
-│   └── server.py            # A2A server
+│       ├── auth.py             # JWT authentication
+│       ├── packages.py         # Vacation packages CRUD
+│       ├── bookings.py         # User bookings
+│       ├── favorites.py        # User favorites
+│       ├── reviews.py          # Package reviews
+│       ├── destinations.py     # Destinations
+│       ├── conversations.py    # Chat IA (WebSocket + REST)
+│       ├── tripadvisor.py      # TripAdvisor hotel data
+│       └── health.py           # Health + Readiness probes
+├── agents/
+│   ├── base.py                 # LLM config (Gemini)
+│   ├── orchestrator/agent.py   # LangGraph orchestrator (routes to DB or UI agent)
+│   ├── database/
+│   │   ├── agent.py            # Database agent
+│   │   └── tools.py            # DB tools (search, booking, favorites)
+│   └── ui/
+│       ├── agent.py            # UI agent (ReAct with checkpointer)
+│       └── tools.py            # UI tools (search_vacation, create_booking_action, etc.)
+├── a2a/                        # Agent-to-Agent protocol
+│   ├── protocol.py
+│   ├── client.py
+│   └── server.py
 ├── auth/
-│   └── middleware.py        # Auth middleware
+│   ├── jwt_service.py          # JWT token service (PyJWT + bcrypt)
+│   └── middleware.py           # Auth middleware (get_current_user, get_optional_user)
 ├── database/
-│   └── supabase_client.py   # Supabase client wrapper
-└── config.py                # Environment configuration
+│   ├── oracle_client.py        # Oracle connection pool (oracledb thin)
+│   ├── oracle_schema.sql       # Full schema (11 tables + triggers)
+│   └── queries.py              # Centralized SQL + format helpers
+├── config.py                   # Settings (pydantic-settings)
+├── telemetry.py                # OpenTelemetry setup
+├── requirements.txt
+└── Dockerfile
 ```
 
-### Frontend Structure
+## Frontend Structure
 
 ```
 frontend/src/
 ├── components/
-│   ├── Layout.tsx           # Main layout wrapper
+│   ├── Layout.tsx              # Main layout (Header + Outlet + Footer)
 │   ├── common/
-│   │   ├── Header.tsx       # Navigation header
-│   │   └── Footer.tsx       # Page footer
+│   │   ├── Header.tsx
+│   │   └── Footer.tsx
 │   ├── chat/
-│   │   └── ChatWidget.tsx   # AI chatbot widget
+│   │   ├── ChatWidget.tsx      # Floating chat widget (WebSocket)
+│   │   └── ChatErrorBoundary.tsx
 │   └── packages/
-│       └── PackageCard.tsx  # Package display card
+│       └── PackageCard.tsx
 ├── pages/
-│   ├── Home.tsx             # Landing page
-│   ├── Login.tsx            # User login
-│   ├── SignUp.tsx           # User registration
-│   ├── Search.tsx           # Package search
-│   └── Bookings.tsx         # User bookings
+│   ├── Home.tsx                # Landing page with featured packages
+│   ├── Search.tsx              # Package search with filters
+│   ├── PackageDetail.tsx       # Single package view + booking form
+│   ├── Hotels.tsx              # TripAdvisor hotels list
+│   ├── HotelDetail.tsx         # Single hotel with photos + reviews
+│   ├── Bookings.tsx            # User's bookings (AG Grid)
+│   ├── Login.tsx
+│   └── SignUp.tsx
 ├── contexts/
-│   └── AuthContext.tsx      # Authentication context
-├── services/                # API service calls
-├── hooks/                   # Custom React hooks
-├── types/                   # TypeScript types
-├── App.tsx                  # Main app component
-└── main.tsx                 # Entry point
+│   ├── AuthContext.tsx          # Auth state (JWT tokens in localStorage)
+│   └── PageContext.tsx          # Current page context for AI agent
+├── hooks/
+│   └── useChat.ts              # WebSocket chat hook
+├── services/
+│   ├── api.ts                  # REST API client
+│   └── tripadvisor.ts          # TripAdvisor API client
+├── utils/
+│   ├── uuid.ts
+│   └── telemetry.ts            # OpenTelemetry browser traces
+├── types/index.ts
+├── App.tsx                     # Router + Providers
+└── main.tsx                    # Entry point
 ```
 
-### Database Schema (Supabase)
+## Database (Oracle 21c XE)
+
+- **Connection**: `localhost:1521/XE`, user `VACANCEAI` / `vacanceai`
+- **SYS password**: `admin`
+- **Schema**: `backend/database/oracle_schema.sql` (11 tables + triggers)
+- **Client**: `backend/database/oracle_client.py` (oracledb thin mode, connection pool)
+- **Queries**: `backend/database/queries.py` (centralized SQL + formatting helpers)
+
+### Key patterns
+- JSON stored in CLOB with `IS JSON` constraint; parsed with `parse_json_field()`
+- BOOLEAN -> NUMBER(1), UUID -> VARCHAR2(36) + SYS_GUID()
+- Pagination: `OFFSET :offset ROWS FETCH NEXT :limit ROWS ONLY`
+- JOINs returned as flat rows, reformatted in `queries.py` format_* helpers
+
+### Tables
 
 | Table | Description |
 |-------|-------------|
-| `destinations` | Travel destinations (countries, cities) |
-| `packages` | Vacation packages with pricing and availability |
+| `users` | User accounts |
+| `refresh_tokens` | JWT refresh tokens |
+| `destinations` | Travel destinations (15 countries) |
+| `packages` | Vacation packages (30 packages) |
 | `bookings` | User reservations |
-| `favorites` | User saved packages |
-| `reviews` | User reviews and ratings |
+| `favorites` | User favorites |
+| `reviews` | Ratings and reviews |
 | `conversations` | AI chat history |
-| `package_embeddings` | Vector embeddings for RAG search |
+| `tripadvisor_locations` | Hotels (TripAdvisor) |
+| `tripadvisor_photos` | Hotel photos |
+| `tripadvisor_reviews` | Hotel reviews |
 
-Row Level Security (RLS) is enabled:
-- Destinations & Packages: Public read access
-- Bookings, Favorites, Conversations: User owns their data
-- Reviews: Public read, authenticated create
+## Auth (Custom JWT)
 
-## Environment Variables
+- **Service**: `backend/auth/jwt_service.py` (PyJWT + passlib bcrypt)
+- **Middleware**: `backend/auth/middleware.py` (get_current_user, get_optional_user)
+- Tokens stored in `refresh_tokens` table, rotated on refresh
+- Frontend uses `localStorage` for tokens
 
-Required in `.env`:
+## AI Agent Architecture
 
-```bash
-# Supabase (from `npx supabase status`)
-ANON_KEY=your_anon_key
-SERVICE_ROLE_KEY=your_service_role_key
+### PageContext System
+- `PageContext` React context reports current page data (route, displayed packages/bookings)
+- Each page sets its context via `useSetPageContext()` in a useEffect
+- `ChatWidget` reads `usePageContext()` and sends it with every WebSocket message
+- Backend injects `[Page actuelle: {...}]` into the HumanMessage for the agent
+- Agent can resolve "celui-ci", "le premier", "ma derniere reservation" using page context
 
-# Google AI
-GOOGLE_API_KEY=your_gemini_api_key
-```
+### Agent Flow
+1. User message arrives via WebSocket (`conversations.py`)
+2. Orchestrator (`orchestrator/agent.py`) classifies and routes to UI or Database agent
+3. UI Agent (`ui/agent.py`) uses Gemini + tools (search, book, navigate, etc.)
+4. Tool results with `action` key become UI actions sent back to frontend
+5. Frontend `ChatWidget` handles actions (navigate, show cards, booking confirmation, etc.)
 
-## Supabase Setup
-
-```bash
-# Initialize Supabase (already done)
-npx supabase init
-
-# Start local Supabase
-npx supabase start
-
-# Apply migrations
-npx supabase db reset
-
-# Open Supabase Studio
-# http://localhost:54323
-```
-
-Migrations are in `supabase/migrations/`.
+### UI Agent Tools
+- `search_vacation` - Search packages with filters
+- `show_package_details` - Show package details
+- `create_booking_action` - Create a booking directly
+- `start_booking_flow` - Open booking form on a package
+- `add_to_favorites_action` - Add to favorites
+- `navigate_to_page` - Navigate frontend to a page
+- `show_recommendations` - Show personalized recommendations
 
 ## API Endpoints
 
 ### Auth
-- `POST /api/auth/signup` - Register new user
-- `POST /api/auth/login` - User login
-- `POST /api/auth/logout` - User logout
+- `POST /api/auth/signup` - Register
+- `POST /api/auth/login` - Login -> access_token + refresh_token
+- `POST /api/auth/refresh` - Refresh token
+- `POST /api/auth/logout` - Logout
+- `GET /api/auth/me` - Profile
+- `PATCH /api/auth/me` - Update profile
 
 ### Packages
-- `GET /api/packages` - List packages
-- `GET /api/packages/{id}` - Get package details
+- `GET /api/packages` - List with filters
+- `GET /api/packages/featured` - Popular packages
+- `GET /api/packages/{id}` - Details
 
 ### Bookings
 - `GET /api/bookings` - User's bookings
 - `POST /api/bookings` - Create booking
-- `PATCH /api/bookings/{id}` - Update booking
+- `PATCH /api/bookings/{id}` - Update/cancel
 
 ### Favorites
-- `GET /api/favorites` - User's favorites
-- `POST /api/favorites` - Add favorite
-- `DELETE /api/favorites/{id}` - Remove favorite
+- `GET /api/favorites` - List
+- `POST /api/favorites/{package_id}` - Add
+- `DELETE /api/favorites/{package_id}` - Remove
 
-### Reviews
-- `GET /api/reviews` - Package reviews
-- `POST /api/reviews` - Create review
+### Chat (WebSocket)
+- `WS /api/conversations/ws/{id}` - Real-time chat
+- `POST /api/conversations/{id}/message` - REST fallback
+- `GET /api/conversations/{id}` - History
 
-### Conversations
-- `GET /api/conversations` - User's chat history
-- `POST /api/conversations` - Send message to AI
+### TripAdvisor
+- `GET /api/tripadvisor/locations` - Hotels
+- `GET /api/tripadvisor/locations/{id}` - Hotel details + photos + reviews
 
-## A2A Protocol
+### Health
+- `GET /api/health` - API status
+- `GET /api/ready` - Readiness (checks Oracle connection)
 
-The backend uses an Agent-to-Agent protocol for AI task coordination:
+## Kubernetes
 
-1. **Orchestrator Agent**: Receives user requests and delegates to specialized agents
-2. **Database Agent**: Handles Supabase queries and data retrieval
-3. **UI Agent**: Manages UI-related tasks and responses
+- **Namespace**: `vacanceai`
+- **Deployments**: backend, frontend, jaeger
+- **Services**: ClusterIP for all, NodePort for jaeger-external
+- **Ingress**: NGINX with WebSocket support (proxy-read-timeout: 3600s)
+- **Images**: `vacanceai-backend:latest`, `vacanceai-frontend:latest` (imagePullPolicy: Never)
+- **Config**: `k8s/configmap.yaml` (env vars), `k8s/secrets.yaml` (credentials, gitignored)
 
-Agents communicate via the protocol defined in `backend/a2a/`.
+## Environment Variables
+
+Required in `.env` or `k8s/secrets.yaml`:
+
+```bash
+ORACLE_HOST=localhost          # or host.docker.internal in k8s
+ORACLE_PORT=1521
+ORACLE_SERVICE=XE
+ORACLE_USER=VACANCEAI
+ORACLE_PASSWORD=vacanceai
+JWT_SECRET_KEY=your-secret-key
+GOOGLE_API_KEY=your-gemini-api-key
+```

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search as SearchIcon, Filter, X } from 'lucide-react';
+import { Search as SearchIcon, Filter } from 'lucide-react';
 import { packagesApi } from '../services/api';
 import { PackageCard } from '../components/packages/PackageCard';
+import { useSetPageContext } from '../contexts/PageContext';
 import type { Package } from '../types';
 
 export const Search: React.FC = () => {
@@ -11,6 +12,8 @@ export const Search: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
   const [showFilters, setShowFilters] = useState(false);
+
+  const setPageContext = useSetPageContext();
 
   // Filter states
   const [destination, setDestination] = useState(searchParams.get('destination') || '');
@@ -42,6 +45,27 @@ export const Search: React.FC = () => {
   useEffect(() => {
     fetchPackages();
   }, [searchParams]);
+
+  useEffect(() => {
+    setPageContext({
+      page: 'search',
+      data: {
+        filters: {
+          destination: destination || undefined,
+          min_price: minPrice || undefined,
+          max_price: maxPrice || undefined,
+          min_duration: minDuration || undefined,
+          max_duration: maxDuration || undefined,
+        },
+        results_count: total,
+        results: packages.map((p) => ({
+          id: p.id,
+          name: p.name,
+          price_per_person: p.price_per_person,
+        })),
+      },
+    });
+  }, [packages, total, destination, minPrice, maxPrice, minDuration, maxDuration]);
 
   const handleSearch = () => {
     const params = new URLSearchParams();

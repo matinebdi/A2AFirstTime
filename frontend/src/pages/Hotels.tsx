@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
-import { MapPin, Star, Filter, ChevronDown, ChevronUp } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { MapPin, Star, Filter } from 'lucide-react';
 import { tripadvisorApi } from '../services/tripadvisor';
+import { useSetPageContext } from '../contexts/PageContext';
 import type { TripAdvisorLocation, TripAdvisorPhoto, TripAdvisorReview } from '../types';
 
 interface HotelWithDetails extends TripAdvisorLocation {
@@ -14,7 +16,7 @@ export const Hotels: React.FC = () => {
   const [countries, setCountries] = useState<string[]>([]);
   const [selectedCountry, setSelectedCountry] = useState<string>('');
   const [loading, setLoading] = useState(true);
-  const [expandedHotel, setExpandedHotel] = useState<string | null>(null);
+  const setPageContext = useSetPageContext();
 
   useEffect(() => {
     const fetchCountries = async () => {
@@ -66,9 +68,21 @@ export const Hotels: React.FC = () => {
     fetchHotels();
   }, [selectedCountry]);
 
-  const toggleHotelExpand = (locationId: string) => {
-    setExpandedHotel(expandedHotel === locationId ? null : locationId);
-  };
+  useEffect(() => {
+    setPageContext({
+      page: 'hotels',
+      data: {
+        filter_country: selectedCountry || undefined,
+        count: hotels.length,
+        hotels: hotels.map((h) => ({
+          location_id: h.location_id,
+          name: h.name,
+          country: h.search_country,
+          rating: h.averageRating,
+        })),
+      },
+    });
+  }, [hotels, selectedCountry]);
 
   const renderStars = (rating: number) => {
     return (
@@ -134,11 +148,11 @@ export const Hotels: React.FC = () => {
       ) : (
         <div className="space-y-6">
           {hotels.map((hotel) => (
-            <div
+            <Link
               key={hotel.id}
-              className="bg-white rounded-xl shadow-lg overflow-hidden"
+              to={`/hotels/${hotel.location_id}`}
+              className="block bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
             >
-              {/* Hotel Card */}
               <div className="flex flex-col md:flex-row">
                 {/* Image */}
                 <div className="md:w-72 h-48 md:h-auto bg-gray-200 flex-shrink-0">
@@ -180,85 +194,12 @@ export const Hotels: React.FC = () => {
                     <span>{hotel.reviews.length} avis</span>
                   </div>
 
-                  {/* Expand Button */}
-                  <button
-                    onClick={() => toggleHotelExpand(hotel.location_id)}
-                    className="mt-4 flex items-center text-blue-600 hover:text-blue-800"
-                  >
-                    {expandedHotel === hotel.location_id ? (
-                      <>
-                        <ChevronUp className="h-4 w-4 mr-1" />
-                        Masquer les details
-                      </>
-                    ) : (
-                      <>
-                        <ChevronDown className="h-4 w-4 mr-1" />
-                        Voir photos et avis
-                      </>
-                    )}
-                  </button>
+                  <span className="mt-4 inline-block text-blue-600 font-medium hover:underline">
+                    Voir les details
+                  </span>
                 </div>
               </div>
-
-              {/* Expanded Details */}
-              {expandedHotel === hotel.location_id && (
-                <div className="border-t">
-                  {/* Photos Grid */}
-                  {hotel.photos.length > 0 && (
-                    <div className="p-6 border-b">
-                      <h3 className="font-semibold text-gray-900 mb-4">Photos</h3>
-                      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
-                        {hotel.photos.slice(0, 12).map((photo) => (
-                          <img
-                            key={photo.id}
-                            src={tripadvisorApi.getPhotoUrl(photo)}
-                            alt={photo.caption || hotel.name}
-                            className="w-full h-24 object-cover rounded-lg"
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Reviews */}
-                  {hotel.reviews.length > 0 && (
-                    <div className="p-6">
-                      <h3 className="font-semibold text-gray-900 mb-4">
-                        Avis ({hotel.reviews.length})
-                      </h3>
-                      <div className="space-y-4">
-                        {hotel.reviews.slice(0, 5).map((review) => (
-                          <div
-                            key={review.id}
-                            className="bg-gray-50 rounded-lg p-4"
-                          >
-                            <div className="flex justify-between items-start mb-2">
-                              <div>
-                                <span className="font-medium text-gray-900">
-                                  {review.user_name || 'Anonymous'}
-                                </span>
-                                <span className="text-sm text-gray-500 ml-2">
-                                  {review.published_date}
-                                </span>
-                              </div>
-                              {review.rating && renderStars(review.rating)}
-                            </div>
-                            {review.title && (
-                              <h4 className="font-medium text-gray-800 mb-1">
-                                {review.title}
-                              </h4>
-                            )}
-                            <p className="text-gray-600 text-sm line-clamp-3">
-                              {review.text}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+            </Link>
           ))}
         </div>
       )}

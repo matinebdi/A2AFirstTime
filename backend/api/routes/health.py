@@ -1,6 +1,7 @@
 """Health check routes"""
 
 from fastapi import APIRouter
+from fastapi.responses import JSONResponse
 from datetime import datetime
 
 router = APIRouter()
@@ -27,8 +28,13 @@ async def readiness_check():
     except Exception as e:
         db_status = f"error: {str(e)}"
 
-    return {
+    body = {
         "status": "ready" if db_status == "connected" else "not_ready",
         "database": db_status,
         "timestamp": datetime.utcnow().isoformat()
     }
+
+    if db_status != "connected":
+        return JSONResponse(content=body, status_code=503)
+
+    return body

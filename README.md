@@ -1,54 +1,55 @@
-# VacanceAI - Plateforme de Réservation de Vacances
+# VacanceAI - Plateforme de Reservation de Vacances
 
-Application complète de réservation de vacances avec assistant IA, intégration TripAdvisor et protocole Agent-to-Agent (A2A).
+Application complete de reservation de vacances avec assistant IA, integration TripAdvisor et protocole Agent-to-Agent (A2A).
 
 ---
 
-## Table des matières
+## Table des matieres
 
-1. [Présentation](#présentation)
-2. [Fonctionnalités](#fonctionnalités)
+1. [Presentation](#presentation)
+2. [Fonctionnalites](#fonctionnalites)
 3. [Stack Technique](#stack-technique)
 4. [Architecture](#architecture)
 5. [Installation](#installation)
 6. [Configuration](#configuration)
 7. [Lancement](#lancement)
-8. [Base de données](#base-de-données)
+8. [Base de donnees](#base-de-donnees)
 9. [API Backend](#api-backend)
 10. [Frontend](#frontend)
 11. [Import TripAdvisor](#import-tripadvisor)
 12. [Protocole A2A](#protocole-a2a)
-13. [Développement](#développement)
+13. [Developpement](#developpement)
 
 ---
 
-## Présentation
+## Presentation
 
-**VacanceAI** est une plateforme moderne de réservation de vacances qui combine :
+**VacanceAI** est une plateforme moderne de reservation de vacances qui combine :
 
 - Un catalogue de packages vacances tout compris
-- Des données hotels en temps réel via TripAdvisor
+- Des donnees hotels en temps reel via TripAdvisor
 - Un assistant IA intelligent (Google Gemini)
 - Une architecture Agent-to-Agent (A2A) pour l'orchestration IA
 - Authentification JWT custom avec refresh tokens
 
 ---
 
-## Fonctionnalités
+## Fonctionnalites
 
 ### Pour les utilisateurs
-- Recherche de packages vacances avec filtres (prix, durée, destination)
+- Recherche de packages vacances avec filtres (prix, duree, destination)
 - Consultation des hotels TripAdvisor avec photos et avis
-- Réservation en ligne
+- Reservation en ligne (directe ou via chatbot IA)
 - Gestion des favoris
-- Historique des réservations
-- Chat avec assistant IA
+- Historique des reservations (AG Grid avec tri/filtre/pagination)
+- Chat avec assistant IA context-aware (connait la page courante)
 
-### Pour les développeurs
-- API REST complète
+### Pour les developpeurs
+- API REST complete + WebSocket pour le chat en temps reel
 - Protocole A2A pour communication inter-agents
-- Base de données Oracle 21c XE
-- Observabilité avec OpenTelemetry + Jaeger
+- Base de donnees Oracle 21c XE
+- Observabilite avec OpenTelemetry + Jaeger
+- PageContext system : l'agent IA connait la page et les donnees affichees
 
 ---
 
@@ -58,43 +59,41 @@ Application complète de réservation de vacances avec assistant IA, intégratio
 |--------|--------------|
 | **Frontend** | React 18, TypeScript, Vite, Tailwind CSS |
 | **Backend** | Python 3.12, FastAPI, Uvicorn |
-| **Base de données** | Oracle 21c XE |
-| **IA** | Google Gemini |
+| **Base de donnees** | Oracle 21c XE |
+| **IA** | Google Gemini (LangChain + LangGraph) |
 | **Auth** | JWT custom (PyJWT + passlib bcrypt) |
-| **Observabilité** | OpenTelemetry, Jaeger |
-| **Conteneurisation** | Docker, Docker Compose |
+| **Observabilite** | OpenTelemetry, Jaeger |
+| **Conteneurisation** | Docker Compose (DB) + Kubernetes (app) |
 
 ---
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         FRONTEND                                │
-│                    React + TypeScript                            │
-│                    localhost:5173                                │
-└─────────────────────────┬───────────────────────────────────────┘
-                          │ HTTP/REST
-┌─────────────────────────▼───────────────────────────────────────┐
-│                         BACKEND                                  │
-│                    FastAPI + Python                              │
-│                    localhost:8080                                │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
-│  │   API REST   │  │  A2A Server  │  │   Agents     │          │
-│  │   /api/*     │  │  /a2a/*      │  │ Orchestrator │          │
-│  └──────────────┘  └──────────────┘  │  Database    │          │
-│                                       │  UI          │          │
-│                                       └──────────────┘          │
-└───────────┬───────────────────────────────────┬─────────────────┘
-            │ oracledb (thin mode)              │ OTLP
-┌───────────▼───────────────┐    ┌──────────────▼─────────────────┐
-│       ORACLE 21c XE       │    │           JAEGER               │
-│  ┌──────────────────────┐ │    │    Traces OpenTelemetry        │
-│  │  Schema VACANCEAI    │ │    │    localhost:16686              │
-│  │  11 tables + triggers│ │    └────────────────────────────────┘
-│  └──────────────────────┘ │
-│       localhost:1521      │
-└───────────────────────────┘
+                    Kubernetes (namespace: vacanceai)
+  ┌──────────────────────────────────────────────────────────┐
+  │                                                          │
+  │   ┌─────────────┐    Ingress NGINX (localhost:80)        │
+  │   │   Ingress   │──── /api, /swagger ──► backend:8000   │
+  │   │   NGINX     │──── / ──────────────► frontend:80     │
+  │   └─────────────┘                                        │
+  │                                                          │
+  │   ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
+  │   │   Backend    │  │   Frontend   │  │    Jaeger    │  │
+  │   │   FastAPI    │  │  React/nginx │  │   Traces     │  │
+  │   │   :8000      │  │   :80        │  │   :16686     │  │
+  │   └──────┬───────┘  └──────────────┘  └──────────────┘  │
+  │          │ oracledb (thin)                               │
+  └──────────┼───────────────────────────────────────────────┘
+             │ host.docker.internal:1521
+  ┌──────────▼───────────────────────────────────────────────┐
+  │              Docker Compose                               │
+  │   ┌──────────────────────────────────────┐               │
+  │   │          Oracle 21c XE               │               │
+  │   │   Schema VACANCEAI (11 tables)       │               │
+  │   │   localhost:1521                     │               │
+  │   └──────────────────────────────────────┘               │
+  └──────────────────────────────────────────────────────────┘
 ```
 
 ### Structure des dossiers
@@ -103,24 +102,24 @@ Application complète de réservation de vacances avec assistant IA, intégratio
 ui-automation-a2a/
 ├── backend/
 │   ├── api/
-│   │   ├── main.py                 # Point d'entrée FastAPI
+│   │   ├── main.py                 # Point d'entree FastAPI
 │   │   └── routes/
 │   │       ├── auth.py             # Authentification (JWT)
 │   │       ├── packages.py         # Packages vacances
-│   │       ├── bookings.py         # Réservations
+│   │       ├── bookings.py         # Reservations
 │   │       ├── favorites.py        # Favoris
 │   │       ├── reviews.py          # Avis
 │   │       ├── destinations.py     # Destinations
 │   │       ├── conversations.py    # Chat IA
-│   │       ├── tripadvisor.py      # Données TripAdvisor
-│   │       └── health.py           # Health check
+│   │       ├── tripadvisor.py      # Donnees TripAdvisor
+│   │       └── health.py           # Health + Readiness
 │   ├── agents/
-│   │   ├── base.py                 # Classe agent de base
+│   │   ├── base.py                 # Config LLM (Gemini)
 │   │   ├── orchestrator/           # Agent coordinateur
-│   │   ├── database/               # Agent requêtes DB
+│   │   ├── database/               # Agent requetes DB
 │   │   └── ui/                     # Agent UI
 │   ├── a2a/
-│   │   ├── protocol.py             # Schémas A2A
+│   │   ├── protocol.py             # Schemas A2A
 │   │   ├── client.py               # Client A2A
 │   │   └── server.py               # Serveur A2A
 │   ├── auth/
@@ -128,8 +127,8 @@ ui-automation-a2a/
 │   │   └── middleware.py           # Middleware auth
 │   ├── database/
 │   │   ├── oracle_client.py        # Client Oracle (oracledb thin)
-│   │   ├── oracle_schema.sql       # Schéma complet (11 tables)
-│   │   └── queries.py              # Requêtes SQL centralisées
+│   │   ├── oracle_schema.sql       # Schema complet (11 tables)
+│   │   └── queries.py              # Requetes SQL centralisees
 │   ├── config.py                   # Configuration (pydantic-settings)
 │   ├── telemetry.py                # OpenTelemetry setup
 │   ├── requirements.txt
@@ -138,52 +137,41 @@ ui-automation-a2a/
 ├── frontend/
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── common/
-│   │   │   │   ├── Header.tsx      # Navigation
-│   │   │   │   └── Footer.tsx      # Pied de page
-│   │   │   ├── chat/
-│   │   │   │   ├── ChatWidget.tsx  # Widget chatbot
-│   │   │   │   └── ChatErrorBoundary.tsx
-│   │   │   ├── packages/
-│   │   │   │   └── PackageCard.tsx # Carte package
-│   │   │   └── Layout.tsx          # Layout principal
+│   │   │   ├── chat/ChatWidget.tsx    # Chat flottant (WebSocket + PageContext)
+│   │   │   └── packages/PackageCard.tsx
 │   │   ├── pages/
-│   │   │   ├── Home.tsx            # Accueil
-│   │   │   ├── Search.tsx          # Recherche
-│   │   │   ├── Hotels.tsx          # Hotels TripAdvisor
-│   │   │   ├── Bookings.tsx        # Réservations
-│   │   │   ├── Login.tsx           # Connexion
-│   │   │   └── SignUp.tsx          # Inscription
-│   │   ├── services/
-│   │   │   ├── api.ts              # Client API backend
-│   │   │   └── tripadvisor.ts      # Service TripAdvisor
+│   │   │   ├── Home.tsx              # + PageContext: featured packages
+│   │   │   ├── Search.tsx            # + PageContext: filtres + resultats
+│   │   │   ├── PackageDetail.tsx     # + PageContext: package affiche
+│   │   │   ├── Bookings.tsx          # + PageContext: liste reservations
+│   │   │   ├── Hotels.tsx            # + PageContext: liste hotels
+│   │   │   └── HotelDetail.tsx       # + PageContext: hotel affiche
 │   │   ├── contexts/
-│   │   │   └── AuthContext.tsx     # Context auth (localStorage)
-│   │   ├── hooks/
-│   │   │   └── useChat.ts          # Hook chat
+│   │   │   ├── AuthContext.tsx        # Auth JWT (localStorage)
+│   │   │   └── PageContext.tsx        # Contexte page courante pour agent IA
+│   │   ├── hooks/useChat.ts           # WebSocket chat hook
+│   │   ├── services/
 │   │   ├── types/
-│   │   │   └── index.ts            # Types TypeScript
-│   │   ├── utils/
-│   │   │   ├── telemetry.ts        # OpenTelemetry frontend
-│   │   │   └── uuid.ts             # UUID helpers
-│   │   ├── App.tsx                 # Routes
-│   │   ├── main.tsx                # Entry point
-│   │   └── index.css               # Styles Tailwind
-│   ├── package.json
-│   ├── vite.config.ts
-│   ├── tailwind.config.js
-│   ├── tsconfig.json
-│   └── Dockerfile
+│   │   ├── App.tsx
+│   │   └── main.tsx
+│   ├── Dockerfile                  # Dev (Vite)
+│   ├── Dockerfile.prod             # Prod (nginx)
+│   └── nginx.conf
 │
 ├── scripts/
-│   ├── tripadvise.ipynb            # Script import TripAdvisor
-│   ├── seed_oracle.py              # Seed données Oracle
-│   └── scraper/data/seed_data.sql  # Données de seed SQL
+│   └── seed_oracle.py              # Seed donnees Oracle + TripAdvisor
+│
+├── k8s/                            # Manifestes Kubernetes
+│   ├── namespace.yaml
+│   ├── secrets.yaml                # (gitignored)
+│   ├── configmap.yaml
+│   ├── jaeger.yaml
+│   ├── backend.yaml
+│   ├── frontend.yaml
+│   └── ingress.yaml
 │
 ├── .env                            # Variables d'environnement
-├── .gitignore
-├── compose.yaml                    # Docker Compose
-├── CLAUDE.md                       # Instructions Claude Code
+├── compose.yaml                    # Docker Compose (Oracle uniquement)
 └── README.md
 ```
 
@@ -191,118 +179,207 @@ ui-automation-a2a/
 
 ## Installation
 
-### Prérequis
+### Prerequis
 
-- **Docker Desktop** (v24+)
+- **Docker Desktop** (v24+) avec **Kubernetes active** (Settings > Kubernetes > Enable)
+- **kubectl** (inclus avec Docker Desktop)
 - **Git**
+- **Python 3.12+** (pour le script de seed)
 
-### Étape 1 : Cloner le repository
+### Etape 1 : Cloner le repository
 
 ```bash
 git clone https://github.com/matinebdi/A2AFirstTime.git
 cd A2AFirstTime
 ```
 
-### Étape 2 : Créer le volume Oracle
+### Etape 2 : Creer le volume Oracle
 
 ```bash
 docker volume create oracle-xe-data
+```
+
+### Etape 3 : Installer l'Ingress NGINX Controller
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.12.0/deploy/static/provider/cloud/deploy.yaml
+
+# Attendre qu'il soit pret
+kubectl wait --namespace ingress-nginx \
+  --for=condition=ready pod \
+  --selector=app.kubernetes.io/component=controller \
+  --timeout=120s
 ```
 
 ---
 
 ## Configuration
 
-Créer un fichier `.env` à la racine du projet :
+### Variables d'environnement (.env)
+
+Creer un fichier `.env` a la racine du projet :
 
 ```env
-# =============================================
-# VacanceAI - Environment Variables
-# =============================================
-
-# Oracle Database
+ORACLE_HOST=localhost
+ORACLE_PORT=1521
+ORACLE_SERVICE=XE
 ORACLE_USER=VACANCEAI
 ORACLE_PASSWORD=vacanceai
 
-# JWT Auth
 JWT_SECRET_KEY=your-secret-key-change-in-production
 JWT_ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=60
 REFRESH_TOKEN_EXPIRE_DAYS=30
 
-# Google AI (Gemini)
-GOOGLE_API_KEY=<votre_gemini_api_key>
+GOOGLE_API_KEY=<votre_cle_gemini>
 ```
+
+### Secrets Kubernetes (k8s/secrets.yaml)
+
+Encoder vos valeurs en base64 et les mettre dans `k8s/secrets.yaml` :
+
+```bash
+echo -n "votre-valeur" | base64
+```
+
+Les secrets requis :
+- `ORACLE_PWD` : mot de passe SYS Oracle (default: `admin`)
+- `ORACLE_PASSWORD` : mot de passe user VACANCEAI (default: `vacanceai`)
+- `JWT_SECRET_KEY` : cle secrete JWT
+- `GOOGLE_API_KEY` : cle API Google Gemini
 
 ---
 
 ## Lancement
 
-### Avec Docker (recommandé)
+### 1. Demarrer Oracle (Docker Compose)
 
 ```bash
-# Construire et lancer (Oracle + Jaeger + Backend + Frontend)
-docker compose up --build
-
-# Ou en arrière-plan
-docker compose up -d --build
+docker compose up -d
 ```
 
-> **Note** : Le premier lancement d'Oracle peut prendre ~2 minutes. Le backend attend que Oracle soit healthy avant de démarrer.
-
-### Initialiser la base de données
-
-Exécuter le schéma SQL dans Oracle :
+Attendre qu'Oracle soit healthy (~2 minutes au premier lancement) :
 
 ```bash
-# Se connecter à Oracle et exécuter le schéma
-docker exec -i oracle-xe sqlplus SYS/admin@//localhost:1521/XE as SYSDBA < backend/database/oracle_schema.sql
+docker compose ps
+# oracle-xe   Up (healthy)
+```
 
-# Puis seed les données
+### 2. Initialiser le schema Oracle
+
+```bash
+docker exec -i oracle-xe bash -c "echo -e '@/tmp/schema.sql\nexit;' | sqlplus -s / as sysdba"
+# Ou :
+docker exec -i oracle-xe sqlplus SYS/admin@//localhost:1521/XE as SYSDBA < backend/database/oracle_schema.sql
+```
+
+### 3. Seed les donnees
+
+```bash
+pip install oracledb requests
 python scripts/seed_oracle.py
+```
+
+Cela insere :
+- 15 destinations (15 pays)
+- 30 packages (2 par pays : Explorer + Premium)
+- 150 hotels TripAdvisor avec photos et avis
+
+### 4. Builder les images Docker
+
+```bash
+# Backend
+docker build -t vacanceai-backend ./backend
+
+# Frontend (production avec nginx)
+docker build -t vacanceai-frontend -f frontend/Dockerfile.prod ./frontend
+```
+
+### 5. Deployer sur Kubernetes
+
+```bash
+kubectl apply -f k8s/
+```
+
+Ou etape par etape :
+
+```bash
+kubectl apply -f k8s/namespace.yaml
+kubectl apply -f k8s/secrets.yaml
+kubectl apply -f k8s/configmap.yaml
+kubectl apply -f k8s/jaeger.yaml
+kubectl apply -f k8s/backend.yaml
+kubectl apply -f k8s/frontend.yaml
+kubectl apply -f k8s/ingress.yaml
+```
+
+### 6. Verifier le deploiement
+
+```bash
+kubectl get pods -n vacanceai
+
+# Resultat attendu :
+# NAME                        READY   STATUS    AGE
+# backend-xxx                 1/1     Running   ...
+# frontend-xxx                1/1     Running   ...
+# jaeger-xxx                  1/1     Running   ...
 ```
 
 ### URLs disponibles
 
-| Service | URL | Description |
-|---------|-----|-------------|
-| Frontend | http://localhost:5173 | Application React |
-| Backend API | http://localhost:8080 | API FastAPI |
-| Swagger UI | http://localhost:8080/swagger | Documentation API interactive |
-| ReDoc | http://localhost:8080/redoc | Documentation API (alternative) |
-| Jaeger UI | http://localhost:16686 | Traces OpenTelemetry |
-| Oracle | localhost:1521/XE | Base de données |
+| Service | URL |
+|---------|-----|
+| Frontend | http://localhost |
+| API | http://localhost/api/health |
+| Swagger | http://localhost/swagger |
+| ReDoc | http://localhost/redoc |
+| Jaeger UI | http://localhost:31686 |
+| Oracle | localhost:1521/XE |
 
-### Commandes Docker
+---
+
+## Commandes utiles
+
+### Docker Compose (Oracle)
 
 ```bash
-# Voir les logs
-docker compose logs -f
+docker compose up -d          # Demarrer Oracle
+docker compose down            # Arreter Oracle
+docker compose logs -f oracle  # Logs Oracle
+```
 
-# Logs d'un service spécifique
-docker compose logs -f backend
-docker compose logs -f frontend
+### Kubernetes (App)
 
-# Arrêter
-docker compose down
+```bash
+# Etat des pods
+kubectl get pods -n vacanceai
 
-# Reconstruire un service
-docker compose up --build backend
+# Logs
+kubectl logs -n vacanceai deploy/backend -f
+kubectl logs -n vacanceai deploy/frontend -f
 
-# Redémarrer
-docker compose restart
+# Redemarrer apres un rebuild d'image
+docker build -t vacanceai-backend ./backend
+kubectl rollout restart deploy/backend -n vacanceai
+
+# Sante
+curl http://localhost/api/health
+curl http://localhost/api/ready
+
+# Tout supprimer
+kubectl delete -f k8s/
 ```
 
 ---
 
-## Base de données
+## Base de donnees
 
 ### Oracle 21c XE
 
 - **User** : `VACANCEAI` / `vacanceai`
 - **Schema** : `backend/database/oracle_schema.sql` (11 tables + triggers)
 - **Client** : `oracledb` en mode thin (pas d'Oracle Instant Client requis)
-- **Connection pool** : géré via `backend/database/oracle_client.py`
+- **Connection pool** : gere via `backend/database/oracle_client.py`
 
 ### Conventions Oracle
 
@@ -315,78 +392,36 @@ docker compose restart
 | `SERIAL` | Triggers + sequences |
 | `LIMIT/OFFSET` | `OFFSET :n ROWS FETCH NEXT :m ROWS ONLY` |
 
-### Tables principales
+### Tables
 
-#### `destinations`
-| Colonne | Type | Description |
-|---------|------|-------------|
-| id | VARCHAR2(36) | UUID (SYS_GUID) |
-| name | VARCHAR2(255) | Nom de la destination |
-| country | VARCHAR2(100) | Pays |
-| city | VARCHAR2(100) | Ville |
-| description | CLOB | Description |
-| image_url | VARCHAR2(500) | Image principale |
-| tags | CLOB (JSON) | Tags (plage, montagne...) |
-| average_rating | NUMBER(3,2) | Note moyenne |
-
-#### `packages`
-| Colonne | Type | Description |
-|---------|------|-------------|
-| id | VARCHAR2(36) | UUID |
-| destination_id | VARCHAR2(36) | FK destination |
-| name | VARCHAR2(255) | Nom du package |
-| description | CLOB | Description |
-| duration_days | NUMBER | Durée en jours |
-| price_per_person | NUMBER(10,2) | Prix par personne |
-| max_persons | NUMBER | Nombre max de personnes |
-| includes | CLOB (JSON) | Ce qui est inclus |
-| is_active | NUMBER(1) | Actif ou non |
-| images | CLOB (JSON) | URLs des images |
-
-#### `bookings`
-| Colonne | Type | Description |
-|---------|------|-------------|
-| id | VARCHAR2(36) | UUID |
-| user_id | VARCHAR2(36) | FK utilisateur |
-| package_id | VARCHAR2(36) | FK package |
-| status | VARCHAR2(20) | pending/confirmed/cancelled/completed |
-| start_date | DATE | Date de début |
-| end_date | DATE | Date de fin |
-| num_persons | NUMBER | Nombre de personnes |
-| total_price | NUMBER(10,2) | Prix total |
-| payment_status | VARCHAR2(20) | unpaid/paid/refunded |
-
-### Tables TripAdvisor
-
-#### `tripadvisor_locations`
-| Colonne | Type | Description |
-|---------|------|-------------|
-| id | VARCHAR2(36) | UUID |
-| location_id | VARCHAR2(50) | ID TripAdvisor |
-| name | VARCHAR2(255) | Nom de l'hotel |
-| address_obj | CLOB (JSON) | Adresse complète |
-| search_country | VARCHAR2(100) | Pays de recherche |
-| category | VARCHAR2(50) | hotels/restaurants/attractions |
-
-#### `tripadvisor_photos` / `tripadvisor_reviews`
-Mêmes structures avec URLs des images et données d'avis.
+| Table | Description |
+|-------|-------------|
+| `users` | Utilisateurs |
+| `refresh_tokens` | Tokens JWT de refresh |
+| `destinations` | Destinations (15 pays) |
+| `packages` | Packages vacances |
+| `bookings` | Reservations |
+| `favorites` | Favoris utilisateurs |
+| `reviews` | Avis et notes |
+| `conversations` | Historique chat IA |
+| `tripadvisor_locations` | Hotels TripAdvisor |
+| `tripadvisor_photos` | Photos TripAdvisor |
+| `tripadvisor_reviews` | Avis TripAdvisor |
 
 ---
 
 ## API Backend
 
-### Authentification (JWT custom)
+### Authentification (JWT)
 
 ```
 POST  /api/auth/signup          # Inscription
-POST  /api/auth/login           # Connexion → access_token + refresh_token
+POST  /api/auth/login           # Connexion -> access_token + refresh_token
 POST  /api/auth/refresh         # Renouveler le token
-POST  /api/auth/logout          # Déconnexion
+POST  /api/auth/logout          # Deconnexion
 GET   /api/auth/me              # Profil utilisateur
 PATCH /api/auth/me              # Modifier le profil
 ```
-
-Les tokens sont stockés dans `localStorage` côté frontend. Les refresh tokens sont stockés en base dans la table `refresh_tokens` et rotés à chaque refresh.
 
 ### Destinations
 
@@ -400,23 +435,16 @@ GET /api/destinations/{id}
 ```
 GET  /api/packages                    # Liste avec filtres
 GET  /api/packages/featured           # Packages populaires
-GET  /api/packages/{id}               # Détails
-GET  /api/packages/{id}/availability  # Vérifier disponibilité
+GET  /api/packages/{id}               # Details
+GET  /api/packages/{id}/availability  # Disponibilite
 ```
 
-**Paramètres de recherche :**
-- `destination` : ID destination
-- `min_price`, `max_price` : Fourchette de prix
-- `min_duration`, `max_duration` : Durée
-- `start_date` : Date de départ
-- `limit`, `offset` : Pagination
-
-### Réservations
+### Reservations
 
 ```
-GET   /api/bookings           # Mes réservations
-GET   /api/bookings/{id}      # Détails
-POST  /api/bookings           # Créer
+GET   /api/bookings           # Mes reservations
+GET   /api/bookings/{id}      # Details
+POST  /api/bookings           # Creer
 PATCH /api/bookings/{id}      # Modifier
 DELETE /api/bookings/{id}     # Annuler
 ```
@@ -427,23 +455,23 @@ DELETE /api/bookings/{id}     # Annuler
 GET    /api/favorites                 # Mes favoris
 POST   /api/favorites/{package_id}    # Ajouter
 DELETE /api/favorites/{package_id}    # Supprimer
-GET    /api/favorites/check/{id}      # Vérifier si favori
+GET    /api/favorites/check/{id}      # Verifier si favori
 ```
 
 ### TripAdvisor
 
 ```
 GET /api/tripadvisor/locations        # Hotels
-GET /api/tripadvisor/locations/{id}   # Détails hotel
+GET /api/tripadvisor/locations/{id}   # Details hotel
 GET /api/tripadvisor/photos/{id}      # Photos
 GET /api/tripadvisor/reviews/{id}     # Avis
 ```
 
-### Conversations (Chat IA)
+### Chat IA
 
 ```
 POST /api/conversations/new              # Nouvelle conversation
-GET  /api/conversations/{id}             # Récupérer
+GET  /api/conversations/{id}             # Recuperer
 POST /api/conversations/{id}/message     # Envoyer message
 DELETE /api/conversations/{id}           # Supprimer
 ```
@@ -452,6 +480,7 @@ DELETE /api/conversations/{id}           # Supprimer
 
 ```
 GET /api/health    # Status de l'API
+GET /api/ready     # Readiness (verifie la connexion Oracle)
 ```
 
 ---
@@ -465,36 +494,65 @@ GET /api/health    # Status de l'API
 | `/` | Home | Accueil avec packages populaires |
 | `/search` | Search | Recherche avec filtres |
 | `/hotels` | Hotels | Hotels TripAdvisor |
-| `/bookings` | Bookings | Mes réservations |
+| `/bookings` | Bookings | Mes reservations |
 | `/login` | Login | Connexion |
 | `/signup` | SignUp | Inscription |
 
 ### Composants principaux
 
 - **Layout** : Structure commune (Header + contenu + Footer)
-- **Header** : Navigation avec menu responsive
-- **ChatWidget** : Widget de chat flottant (IA)
+- **ChatWidget** : Widget de chat flottant (assistant IA)
 - **PackageCard** : Carte d'affichage d'un package
-
-### Services
-
-- **api.ts** : Client Axios pour le backend
-- **tripadvisor.ts** : Service données TripAdvisor
 
 ---
 
 ## Import TripAdvisor
 
-### Prérequis
+Le script `scripts/seed_oracle.py` fetche automatiquement les donnees TripAdvisor (hotels, photos, avis) pour 15 pays et seed les destinations + packages.
 
-- Clé API TripAdvisor Content API (variable d'env `TRIPADVISOR_API_KEY`)
-- Jupyter ou VS Code avec extension Jupyter
+```bash
+# Variable d'env optionnelle (cle par defaut incluse)
+export TRIPADVISOR_API_KEY=votre_cle
 
-### Exécution
+python scripts/seed_oracle.py
+```
 
-1. Ouvrir `scripts/tripadvise.ipynb`
-2. Définir la variable d'environnement `TRIPADVISOR_API_KEY`
-3. Exécuter les cellules dans l'ordre : fetch hotels → photos → reviews → insert en base
+---
+
+## PageContext (Contexte de page pour l'agent IA)
+
+L'agent IA connait la page que l'utilisateur consulte et les donnees affichees. Cela permet des interactions comme "reserve celui-ci" ou "montre-moi le premier" sans ambiguite.
+
+### Fonctionnement
+
+1. **`PageContext`** (React Context) stocke les infos de la page courante (page, route, donnees)
+2. Chaque page met a jour ce contexte via `useSetPageContext()` dans un `useEffect`
+3. **`ChatWidget`** lit `usePageContext()` et l'envoie avec chaque message WebSocket
+4. Le backend injecte `[Page actuelle: {...}]` dans le message pour l'agent Gemini
+5. L'agent utilise ces donnees pour resoudre les references implicites
+
+### Donnees envoyees par page
+
+| Page | Donnees |
+|------|---------|
+| Home | `featured_packages: [{id, name}]` |
+| Search | `filters: {destination, min_price, ...}`, `results: [{id, name, price}]` |
+| PackageDetail | `package_id, package_name, destination, price, duration` |
+| Bookings | `bookings: [{id, package_name, status, start_date}]` |
+| Hotels | `hotels: [{location_id, name, country, rating}]` |
+| HotelDetail | `location_id, hotel_name, country, rating` |
+
+### Exemples d'utilisation
+
+- Sur PackageDetail: "reserve celui-ci pour 2 personnes le 15 juin" -> l'agent connait le package
+- Sur Search: "montre-moi plus de details sur le premier" -> l'agent connait les resultats
+- Sur Bookings: "annule ma derniere reservation" -> l'agent voit la liste des bookings
+
+### Comportement apres reservation
+
+Quand l'agent confirme une reservation via le chat, le frontend :
+1. Affiche une notification de succes (1.5s)
+2. Navigue automatiquement vers la page Reservations
 
 ---
 
@@ -502,45 +560,39 @@ GET /api/health    # Status de l'API
 
 Le backend utilise le protocole Agent-to-Agent (A2A) de Google pour la coordination des agents IA.
 
-### Agents disponibles
+### Agents
 
 | Agent | Description |
 |-------|-------------|
-| **Orchestrator** | Coordonne les autres agents |
-| **Database** | Requêtes Oracle |
+| **Orchestrator** | Coordonne les autres agents (LangGraph) |
+| **Database** | Requetes Oracle (LangChain tools) |
 | **UI** | Actions interface utilisateur |
 
 ### Endpoints A2A
 
 ```
-GET  /.well-known/agent.json    # Agent Card (métadonnées)
-POST /a2a/tasks                  # Créer une tâche
-GET  /a2a/tasks/{id}            # Status d'une tâche
+GET  /.well-known/agent.json    # Agent Card (metadonnees)
+POST /a2a/tasks                  # Creer une tache
+GET  /a2a/tasks/{id}            # Status d'une tache
 POST /a2a/tasks/{id}/messages   # Envoyer un message
-POST /a2a/tasks/{id}/cancel     # Annuler une tâche
+POST /a2a/tasks/{id}/cancel     # Annuler une tache
 ```
 
 ---
 
-## Développement
+## Developpement
 
-### Sans Docker
+### Sans Docker/K8s (dev local)
 
 #### Backend
 
 ```bash
 cd backend
-
-# Créer environnement virtuel
 python -m venv venv
-source venv/bin/activate  # Linux/Mac
 .\venv\Scripts\activate   # Windows
-
-# Installer dépendances
 pip install -r requirements.txt
 
-# Lancer sur port 8000 (Oracle doit tourner sur localhost:1521)
-# Note : en Docker, le port 8000 est mappé sur 8080 (compose.yaml)
+# Oracle doit tourner sur localhost:1521
 uvicorn api.main:app --reload --port 8000
 ```
 
@@ -548,48 +600,46 @@ uvicorn api.main:app --reload --port 8000
 
 ```bash
 cd frontend
-
-# Installer dépendances
 npm install
-
-# Lancer
 npm run dev
+# Ouvre http://localhost:5173
 ```
 
 ---
 
 ## Troubleshooting
 
-### Erreur "Module not found"
+### Backend ne demarre pas (readiness 503)
+
+Le readiness probe verifie la connexion Oracle. Verifier qu'Oracle tourne :
 
 ```bash
-docker compose down
-docker compose up --build
+docker compose ps   # oracle-xe doit etre "healthy"
 ```
 
-### Oracle ne démarre pas
+### ErrImageNeverPull dans K8s
+
+Les images Docker n'existent pas localement. Builder d'abord :
 
 ```bash
-# Vérifier que le volume existe
-docker volume ls | grep oracle-xe-data
-
-# Créer si manquant
-docker volume create oracle-xe-data
-
-# Vérifier les logs
-docker compose logs oracle
+docker build -t vacanceai-backend ./backend
+docker build -t vacanceai-frontend -f frontend/Dockerfile.prod ./frontend
+kubectl rollout restart deploy/backend deploy/frontend -n vacanceai
 ```
-
-### Erreur CORS
-
-Vérifier que `FRONTEND_URL` dans compose.yaml correspond à l'URL du frontend.
 
 ### Reset complet
 
 ```bash
-docker compose down -v
+# Supprimer K8s
+kubectl delete -f k8s/
+
+# Supprimer Oracle
+docker compose down
+
+# Recreer
 docker volume create oracle-xe-data
-docker compose up --build
+docker compose up -d
+# Attendre healthy, puis re-seed et re-deployer
 ```
 
 ---

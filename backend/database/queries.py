@@ -131,7 +131,7 @@ PACKAGE_SIMPLE = "SELECT * FROM packages WHERE id = :id"
 
 PACKAGE_REVIEWS_WITH_USERS = """
     SELECT r.id, r.user_id, r.package_id, r.booking_id, r.rating,
-           r.review_comment AS comment, r.created_at, r.updated_at,
+           r.review_comment AS "comment", r.created_at, r.updated_at,
            u.first_name, u.last_name, u.avatar_url
     FROM reviews r
     JOIN users u ON r.user_id = u.id
@@ -217,7 +217,7 @@ FAVORITE_DELETE = """
 
 REVIEWS_BY_PACKAGE = """
     SELECT r.id, r.user_id, r.package_id, r.booking_id, r.rating,
-           r.review_comment AS comment, r.created_at, r.updated_at,
+           r.review_comment AS "comment", r.created_at, r.updated_at,
            u.first_name, u.last_name, u.avatar_url
     FROM reviews r
     JOIN users u ON r.user_id = u.id

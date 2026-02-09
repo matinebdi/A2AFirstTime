@@ -36,11 +36,15 @@ export interface Package {
   duration_days: number;
   price_per_person: number;
   max_persons: number;
-  includes: PackageIncludes;
+  included?: PackageIncludes;
+  not_included?: string[];
+  highlights?: string[];
+  image_url?: string;
   available_from: string;
   available_to: string;
   is_active: boolean;
   images: string[];
+  hotel_category?: number;
   created_at: string;
   // Joined data
   destinations?: Destination;

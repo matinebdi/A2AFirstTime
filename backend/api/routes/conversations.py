@@ -74,6 +74,7 @@ async def websocket_chat(websocket: WebSocket, conversation_id: str):
                 context={
                     "history": history,
                     "user": user_context.get("user"),
+                    "conversation_id": conversation_id,
                     **user_context
                 }
             )
@@ -148,6 +149,7 @@ async def send_message(
         message=chat.message,
         context={
             "history": history,
+            "conversation_id": conversation_id,
             **(chat.context or {})
         }
     )

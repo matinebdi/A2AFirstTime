@@ -4,6 +4,10 @@ from langgraph.graph import StateGraph, END
 from langchain_core.messages import HumanMessage, AIMessage
 from typing import TypedDict, Optional, List, Dict, Any, Literal
 from enum import Enum
+import logging
+import traceback
+
+logger = logging.getLogger(__name__)
 
 from agents.base import get_llm
 from agents.database.agent import invoke_database_agent
@@ -86,6 +90,7 @@ async def handle_database_agent(state: OrchestratorState) -> OrchestratorState:
         state["response"] = result["response"]
         state["agent_type"] = AgentType.DATABASE.value
     except Exception as e:
+        logger.error(f"Database agent error: {e}\n{traceback.format_exc()}")
         state["error"] = f"Database agent error: {str(e)}"
         state["response"] = "Une erreur s'est produite lors de l'accès aux données."
 
@@ -95,15 +100,19 @@ async def handle_database_agent(state: OrchestratorState) -> OrchestratorState:
 async def handle_ui_agent(state: OrchestratorState) -> OrchestratorState:
     """Process request with UI agent"""
     try:
+        context = state.get("context") or {}
         result = await invoke_ui_agent(
             message=state["message"],
-            conversation_history=state.get("context", {}).get("history"),
-            user_context=state.get("context", {}).get("user")
+            conversation_history=context.get("history"),
+            user_context=context.get("user"),
+            conversation_id=context.get("conversation_id"),
+            page_context=context.get("page")
         )
         state["response"] = result["response"]
         state["ui_actions"] = result.get("ui_actions", [])
         state["agent_type"] = AgentType.UI.value
     except Exception as e:
+        logger.error(f"UI agent error: {e}\n{traceback.format_exc()}")
         state["error"] = f"UI agent error: {str(e)}"
         state["response"] = "Je rencontre un problème technique. Pouvez-vous reformuler votre demande?"
 

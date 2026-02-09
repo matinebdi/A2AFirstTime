@@ -3,11 +3,13 @@ import { Link } from 'react-router-dom';
 import { Search, Plane, Shield, Clock } from 'lucide-react';
 import { packagesApi } from '../services/api';
 import { PackageCard } from '../components/packages/PackageCard';
+import { useSetPageContext } from '../contexts/PageContext';
 import type { Package } from '../types';
 
 export const Home: React.FC = () => {
   const [featuredPackages, setFeaturedPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
+  const setPageContext = useSetPageContext();
 
   useEffect(() => {
     const fetchFeatured = async () => {
@@ -22,6 +24,16 @@ export const Home: React.FC = () => {
     };
     fetchFeatured();
   }, []);
+
+  useEffect(() => {
+    setPageContext({
+      page: 'home',
+      data: {
+        featured_count: featuredPackages.length,
+        featured_packages: featuredPackages.map((p) => ({ id: p.id, name: p.name })),
+      },
+    });
+  }, [featuredPackages]);
 
   return (
     <div>

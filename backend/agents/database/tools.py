@@ -5,7 +5,7 @@ from langchain_core.tools import tool
 from typing import Optional, List
 from datetime import datetime, timedelta
 
-from database.oracle_client import execute_query, execute_query_single, execute_insert
+from database.oracle_client import execute_query, execute_query_single, execute_insert, execute_delete
 from database.queries import (
     PACKAGES_LIST_BASE, PACKAGE_BY_ID, PACKAGE_SIMPLE,
     BOOKINGS_BY_USER, FAVORITES_BY_USER, FAVORITE_CHECK,
@@ -15,7 +15,6 @@ from database.queries import (
     format_favorite_with_joins, format_destination,
     parse_json_field
 )
-from database.oracle_client import execute_delete
 
 
 @tool

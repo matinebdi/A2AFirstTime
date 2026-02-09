@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { AgGridReact } from 'ag-grid-react';
 import { ColDef } from 'ag-grid-community';
 import 'ag-grid-community/styles/ag-grid.css';
@@ -7,6 +7,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Calendar, MapPin, Users, CreditCard, Loader2 } from 'lucide-react';
 import { bookingsApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useSetPageContext } from '../contexts/PageContext';
 import type { Booking } from '../types';
 
 const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
@@ -44,6 +45,7 @@ export const Bookings: React.FC = () => {
   const [payingBookingId, setPayingBookingId] = useState<string | null>(null);
   const { user } = useAuth();
   const navigate = useNavigate();
+  const setPageContext = useSetPageContext();
 
   useEffect(() => {
     if (!user) {
@@ -52,6 +54,23 @@ export const Bookings: React.FC = () => {
     }
     fetchBookings();
   }, [user, navigate]);
+
+  useEffect(() => {
+    setPageContext({
+      page: 'bookings',
+      data: {
+        count: bookings.length,
+        bookings: bookings.map((b) => ({
+          id: b.id,
+          package_name: b.packages?.name,
+          status: b.status,
+          start_date: b.start_date,
+          total_price: b.total_price,
+          num_persons: b.num_persons,
+        })),
+      },
+    });
+  }, [bookings]);
 
   const fetchBookings = async () => {
     setLoading(true);

@@ -2,7 +2,7 @@
 
 from langchain_core.tools import tool
 from typing import Optional, List, Dict, Any
-from agents.database.tools import search_packages, get_package_details
+from agents.database.tools import search_packages, get_package_details, create_booking
 
 
 @tool
@@ -174,6 +174,66 @@ def get_current_page_state() -> Dict[str, Any]:
         "action": "get_state",
         "note": "State will be provided by frontend context"
     }
+
+
+@tool
+def create_booking_action(
+    user_id: str,
+    package_id: str,
+    start_date: str,
+    num_persons: int = 2,
+    special_requests: Optional[str] = None
+) -> Dict[str, Any]:
+    """Create a booking directly for the user. Use this when the user wants to book a package.
+
+    Args:
+        user_id: UUID of the authenticated user (from user context)
+        package_id: UUID of the package to book
+        start_date: Start date in YYYY-MM-DD format
+        num_persons: Number of travelers (default 2)
+        special_requests: Optional special requests from the user
+
+    Returns:
+        Booking confirmation or error for the UI
+    """
+    if not user_id:
+        return {
+            "action": "navigate",
+            "page": "login",
+            "message": "Vous devez être connecté pour réserver. Connectez-vous d'abord."
+        }
+
+    # Get package details for the confirmation display
+    package = get_package_details.invoke({"package_id": package_id})
+    if "error" in package:
+        return {"action": "show_error", "message": "Package non trouvé"}
+
+    result = create_booking.invoke({
+        "user_id": user_id,
+        "package_id": package_id,
+        "start_date": start_date,
+        "num_persons": num_persons,
+        "special_requests": special_requests
+    })
+
+    if result.get("success"):
+        booking = result["booking"]
+        return {
+            "action": "booking_confirmed",
+            "booking": {
+                "id": booking["id"],
+                "total_price": booking["total_price"],
+                "status": booking["status"],
+                "start_date": start_date,
+                "num_persons": num_persons,
+                "package_name": package.get("name", ""),
+                "package_image": (package.get("images") or [None])[0] or package.get("image_url", ""),
+                "destination_name": package.get("destinations", {}).get("name", ""),
+            },
+            "message": f"Réservation confirmée ! {package.get('name', '')} pour {num_persons} personne(s) le {start_date}. Total: {booking['total_price']}€"
+        }
+
+    return {"action": "show_error", "message": result.get("error", "Erreur lors de la réservation")}
 
 
 @tool
