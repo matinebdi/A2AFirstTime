@@ -1,3 +1,4 @@
+# VacanceAI Frontend Dockerfile (Development)
 FROM node:20-alpine
 
 WORKDIR /app
@@ -14,5 +15,5 @@ COPY . .
 # Expose port
 EXPOSE 5173
 
-# Run development server
-CMD ["npm", "run", "dev"]
+# Run development server with host binding
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

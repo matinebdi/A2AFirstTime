@@ -1,27 +1,43 @@
 {
-  "name": "a2a-frontend",
+  "name": "vacanceai-frontend",
   "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "tsc && vite build",
     "preview": "vite preview",
-    "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0"
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-router-dom": "^7.0.0",
+    "ag-grid-react": "^32.0.0",
+    "ag-grid-community": "^32.0.0",
     "axios": "^1.7.9",
-    "lucide-react": "^0.460.0"
+    "lucide-react": "^0.460.0",
+    "@opentelemetry/api": "^1.7.0",
+    "@opentelemetry/sdk-trace-web": "^1.20.0",
+    "@opentelemetry/sdk-trace-base": "^1.20.0",
+    "@opentelemetry/instrumentation-fetch": "^0.47.0",
+    "@opentelemetry/instrumentation-xml-http-request": "^0.47.0",
+    "@opentelemetry/instrumentation": "^0.47.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.47.0",
+    "@opentelemetry/context-zone": "^1.20.0",
+    "@opentelemetry/resources": "^1.20.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.5.0",
     "eslint": "^9.15.0",
     "eslint-plugin-react": "^7.37.2",
     "eslint-plugin-react-hooks": "^5.0.0",
     "eslint-plugin-react-refresh": "^0.4.14",
-    "vite": "^6.0.1"
+    "vite": "^6.0.1",
+    "tailwindcss": "^3.4.0",
+    "postcss": "^8.4.32",
+    "autoprefixer": "^10.4.16"
   }
 }

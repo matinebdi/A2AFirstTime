@@ -7,6 +7,7 @@ __pycache__/
 env/
 venv/
 .venv/
+.A2A/
 ENV/
 build/
 develop-eggs/
@@ -47,6 +48,10 @@ dist-ssr/
 .env.*.local
 *.secret
 
+# Claude Code
+.claude/
+.config/
+
 # IDEs
 .vscode/
 .idea/
@@ -76,6 +81,10 @@ agent_*.log
 tmp/
 temp/
 *.tmp
+
+# Scripts output
+scripts/*.csv
+tripadvisor_data.csv
 
 # Database
 *.db

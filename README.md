@@ -1,315 +1,677 @@
-# UI Automation A2A - Multi-Agent Workflow Engine
+# VacanceAI - Plateforme de Réservation de Vacances
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Python](https://img.shields.io/badge/python-3.12-blue.svg)
-![React](https://img.shields.io/badge/react-19-blue.svg)
-![Kubernetes](https://img.shields.io/badge/kubernetes-ready-green.svg)
-
-A production-ready multi-agent system using Google's **Agent-to-Agent (A2A)** protocol for intelligent UI automation and testing, deployed on Kubernetes with comprehensive monitoring.
-
-## 🎯 Project Overview
-
-This project demonstrates a modern microservices architecture where AI agents collaborate to automate user interface interactions. Agents communicate using the A2A protocol, making decisions, analyzing UI elements, and executing actions autonomously.
-
-### Key Features
-
-- 🤖 **5 Specialized Agents**: Orchestrator, Decision, Vision, Form, Validation
-- 🔄 **A2A Protocol**: Structured agent-to-agent communication via Redis Pub/Sub
-- 🧠 **AI-Powered**: Google Gemini integration for intelligent decision-making
-- 📊 **Real-time Dashboard**: React-based visualization of agent activity
-- ☸️ **Kubernetes Native**: Full K8s deployment with auto-scaling
-- 📈 **Complete Monitoring**: Prometheus, Grafana, and OpenTelemetry
-- 🔒 **Secure**: JWT authentication, secrets management
-- 🚀 **CI/CD Ready**: GitHub Actions pipeline
-
-## 🏗️ Architecture
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        Frontend (React)                      │
-│              WebSocket + Agent Visualization                 │
-└────────────────────┬────────────────────────────────────────┘
-                     │
-                     ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    API Gateway (Envoy)                       │
-└────────────────────┬────────────────────────────────────────┘
-                     │
-        ┌────────────┴────────────┐
-        ▼                         ▼
-┌──────────────┐          ┌──────────────┐
-│ Orchestrator │◄────────►│    Redis     │
-│    Agent     │          │  (Pub/Sub)   │
-└──────┬───────┘          └──────────────┘
-       │
-       ├─► Decision Agent (Gemini AI)
-       │
-       ├─► Vision Agent (UI Analysis)
-       │
-       ├─► Form Agent (Data + Memory)
-       │
-       └─► Validation Agent (Verification)
-              │
-              ▼
-       ┌──────────────┐
-       │  PostgreSQL  │
-       │   (Memory)   │
-       └──────────────┘
-```
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-- Docker & Docker Compose
-- Node.js 20+
-- Python 3.12+
-- kubectl (for K8s deployment)
-- Just (command runner) - `cargo install just`
-
-### Local Development
-
-```bash
-# Clone the repository
-git clone <your-repo-url>
-cd ui-automation-a2a
-
-# Start all services
-just dev
-
-# Access the application
-# Frontend: http://localhost:5173
-# Backend API: http://localhost:8000
-# Grafana: http://localhost:3000
-```
-
-### Environment Setup
-
-Create `.env` file in the root:
-
-```env
-# Database
-POSTGRES_USER=agent_user
-POSTGRES_PASSWORD=agent_password
-POSTGRES_DB=agent_memory
-
-# Redis
-REDIS_HOST=redis
-REDIS_PORT=6379
-
-# AI Services
-GOOGLE_API_KEY=your_gemini_api_key_here
-
-# Security
-JWT_SECRET=your_jwt_secret_here
-```
-
-## 📦 Project Structure
-
-```
-ui-automation-a2a/
-├── agents/                    # Microservices agents
-│   ├── orchestrator/         # Main coordinator
-│   ├── decision/             # AI decision maker
-│   ├── vision/               # UI analyzer
-│   ├── form/                 # Form handler with memory
-│   └── validation/           # Result validator
-├── shared/                   # Shared libraries
-│   └── a2a_protocol/        # A2A message schemas
-├── frontend/                 # React dashboard
-│   ├── src/
-│   │   ├── components/      # UI components
-│   │   └── hooks/           # Custom hooks
-├── deploy/                   # Kubernetes manifests
-│   ├── agents/              # Agent deployments
-│   ├── infra/               # Infrastructure (Redis, PostgreSQL)
-│   ├── monitoring/          # Prometheus, Grafana
-│   └── gateway/             # Envoy Gateway
-├── monitoring/              # Monitoring configs
-├── .github/workflows/       # CI/CD pipelines
-├── compose.yaml            # Docker Compose dev
-├── Justfile                # Task automation
-└── README.md
-```
-
-## 🤖 Agent Overview
-
-### Orchestrator Agent
-- Receives UI events from frontend
-- Dispatches tasks to specialized agents
-- Coordinates A2A message flow
-- No decision-making, pure coordination
-
-### Decision Agent
-- Analyzes context and state
-- Creates action plans using Gemini AI
-- Decides which agents to invoke
-- Maintains decision history
-
-### Vision Agent
-- Analyzes screenshots and UI elements
-- Detects buttons, forms, and interactive elements
-- Uses Gemini Vision for understanding
-
-### Form Agent
-- Fills form fields intelligently
-- Stores user data in PostgreSQL
-- Retrieves historical form data
-
-### Validation Agent
-- Verifies action success
-- Checks UI state changes
-- Reports results to orchestrator
-
-## 🔄 A2A Protocol
-
-### Message Structure
-
-```json
-{
-  "message_id": "uuid-v4",
-  "from_agent": "orchestrator",
-  "to_agent": "decision",
-  "message_type": "request|response|event",
-  "timestamp": "2025-12-16T10:30:00Z",
-  "payload": {
-    "task": "analyze_context",
-    "context": {},
-    "priority": "high|normal|low"
-  },
-  "callback_id": "parent-message-uuid",
-  "correlation_id": "workflow-uuid"
-}
-```
-
-### Communication Flow
-
-1. **User Action** → Frontend sends event via WebSocket
-2. **Orchestrator** receives and creates A2A request
-3. **Decision Agent** analyzes and plans actions
-4. **Specialized Agents** execute tasks in parallel/sequence
-5. **Orchestrator** aggregates responses
-6. **Frontend** displays real-time updates
-
-## ☸️ Kubernetes Deployment
-
-```bash
-# Deploy to Kubernetes
-just deploy
-
-# Check status
-kubectl get pods -n agents-system
-
-# View logs
-just logs orchestrator
-
-# Scale decision agent
-kubectl scale deployment decision-agent --replicas=5 -n agents-workers
-```
-
-### Auto-scaling
-
-Horizontal Pod Autoscaler (HPA) configured for:
-- Decision Agent: 1-5 replicas (CPU 50%)
-- Vision Agent: 1-5 replicas (CPU 50%)
-- Form Agent: 2-4 replicas (CPU 60%)
-
-## 📊 Monitoring
-
-### Prometheus Metrics
-
-```
-# A2A Messages
-a2a_messages_total{from_agent, to_agent}
-a2a_message_latency_seconds{from_agent, to_agent}
-
-# Agent Performance
-agent_task_duration_seconds{agent, task}
-agent_errors_total{agent, error_type}
-
-# System
-redis_pubsub_messages_total
-postgres_connections_active
-```
-
-### Grafana Dashboards
-
-Access: http://localhost:3000 (user: admin, pass: admin)
-
-- **Agent Activity**: Real-time agent communication
-- **A2A Message Flow**: Protocol metrics
-- **System Health**: Resource usage
-- **Workflow Timeline**: End-to-end traces
-
-## 🧪 Testing
-
-```bash
-# Backend tests
-cd agents/orchestrator
-pytest tests/
-
-# Frontend tests
-cd frontend
-npm run test
-
-# Load testing
-just load-test
-```
-
-## 🎬 Demo Scenarios
-
-### Scenario 1: Auto-Fill Registration Form
-
-1. User clicks "Auto-Fill" button
-2. Orchestrator receives event
-3. Decision Agent plans: "Fill username, email, password"
-4. Form Agent retrieves or generates data
-5. Vision Agent validates form state
-6. Validation Agent confirms success
-
-### Scenario 2: Multi-Step Checkout
-
-1. User initiates checkout
-2. Agents collaborate to:
-   - Fill shipping address
-   - Select payment method
-   - Review order
-   - Confirm purchase
-3. Dashboard shows agent collaboration in real-time
-
-## 📚 Documentation
-
-- [A2A Protocol Specification](./docs/A2A_PROTOCOL.md)
-- [Agent Development Guide](./docs/AGENT_DEVELOPMENT.md)
-- [Kubernetes Deployment](./docs/KUBERNETES.md)
-- [Monitoring Setup](./docs/MONITORING.md)
-
-## 🛠️ Available Commands (Justfile)
-
-```bash
-just dev          # Start development environment
-just build        # Build all Docker images
-just deploy       # Deploy to Kubernetes
-just logs <svc>   # View service logs
-just test         # Run all tests
-just clean        # Stop and remove all containers
-just monitor      # Open Grafana dashboard
-```
-
-## 🤝 Contributing
-
-This is an educational project for learning A2A protocol and Kubernetes. Feel free to explore and adapt!
-
-## 📝 License
-
-MIT License - see LICENSE file for details
-
-## 🙏 Acknowledgments
-
-- Google Gemini AI for intelligent decision-making
-- Kubernetes community for excellent documentation
-- FastAPI for modern Python web framework
+Application complète de réservation de vacances avec assistant IA, intégration TripAdvisor et architecture microservices.
 
 ---
 
-**Built with ❤️ for learning Agent-to-Agent protocols and Kubernetes orchestration**
+## Table des matières
+
+1. [Présentation](#présentation)
+2. [Fonctionnalités](#fonctionnalités)
+3. [Stack Technique](#stack-technique)
+4. [Architecture](#architecture)
+5. [Installation](#installation)
+6. [Configuration](#configuration)
+7. [Lancement](#lancement)
+8. [Base de données](#base-de-données)
+9. [API Backend](#api-backend)
+10. [Frontend](#frontend)
+11. [Import TripAdvisor](#import-tripadvisor)
+12. [Protocole A2A](#protocole-a2a)
+13. [Développement](#développement)
+
+---
+
+## Présentation
+
+**VacanceAI** est une plateforme moderne de réservation de vacances qui combine :
+
+- Un catalogue de packages vacances tout compris
+- Des données hotels en temps réel via TripAdvisor
+- Un assistant IA intelligent (Google Gemini)
+- Une recherche sémantique via RAG (pgvector)
+- Une architecture Agent-to-Agent (A2A) pour l'orchestration IA
+
+---
+
+## Fonctionnalités
+
+### Pour les utilisateurs
+- Recherche de packages vacances avec filtres (prix, durée, destination)
+- Consultation des hotels TripAdvisor avec photos et avis
+- Réservation en ligne
+- Gestion des favoris
+- Historique des réservations
+- Chat avec assistant IA
+
+### Pour les développeurs
+- API REST complète
+- Architecture microservices
+- Protocole A2A pour communication inter-agents
+- Base de données PostgreSQL avec Row Level Security
+- Recherche vectorielle (embeddings)
+
+---
+
+## Stack Technique
+
+| Couche | Technologies |
+|--------|--------------|
+| **Frontend** | React 18, TypeScript, Vite, Tailwind CSS |
+| **Backend** | Python 3.12, FastAPI, Uvicorn |
+| **Base de données** | Supabase (PostgreSQL 15), pgvector |
+| **IA** | Google Gemini, LangChain, LangGraph |
+| **Auth** | Supabase Auth (JWT) |
+| **Storage** | Supabase Storage (S3-compatible) |
+| **Conteneurisation** | Docker, Docker Compose |
+
+---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         FRONTEND                                 │
+│                    React + TypeScript                            │
+│                    localhost:5173                                │
+└─────────────────────────┬───────────────────────────────────────┘
+                          │ HTTP/REST
+┌─────────────────────────▼───────────────────────────────────────┐
+│                         BACKEND                                  │
+│                    FastAPI + Python                              │
+│                    localhost:8080                                │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
+│  │   API REST   │  │  A2A Server  │  │   Agents     │          │
+│  │   /api/*     │  │  /a2a/*      │  │ Orchestrator │          │
+│  └──────────────┘  └──────────────┘  │  Database    │          │
+│                                       │  UI          │          │
+│                                       └──────────────┘          │
+└─────────────────────────┬───────────────────────────────────────┘
+                          │ PostgreSQL
+┌─────────────────────────▼───────────────────────────────────────┐
+│                        SUPABASE                                  │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
+│  │  PostgreSQL  │  │    Auth      │  │   Storage    │          │
+│  │  + pgvector  │  │    JWT       │  │   (Images)   │          │
+│  └──────────────┘  └──────────────┘  └──────────────┘          │
+│                    localhost:54321                               │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Structure des dossiers
+
+```
+ui-automation-a2a/
+├── backend/
+│   ├── api/
+│   │   ├── main.py                 # Point d'entrée FastAPI
+│   │   └── routes/
+│   │       ├── auth.py             # Authentification
+│   │       ├── packages.py         # Packages vacances
+│   │       ├── bookings.py         # Réservations
+│   │       ├── favorites.py        # Favoris
+│   │       ├── reviews.py          # Avis
+│   │       ├── destinations.py     # Destinations
+│   │       ├── conversations.py    # Chat IA
+│   │       └── health.py           # Health check
+│   ├── agents/
+│   │   ├── base.py                 # Classe agent de base
+│   │   ├── orchestrator/           # Agent coordinateur
+│   │   ├── database/               # Agent requêtes DB
+│   │   └── ui/                     # Agent UI
+│   ├── a2a/
+│   │   ├── protocol.py             # Schémas A2A
+│   │   ├── client.py               # Client A2A
+│   │   └── server.py               # Serveur A2A
+│   ├── auth/
+│   │   └── middleware.py           # Middleware JWT
+│   ├── database/
+│   │   └── supabase_client.py      # Client Supabase
+│   ├── config.py                   # Configuration
+│   ├── requirements.txt            # Dépendances Python
+│   └── Dockerfile
+│
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── common/
+│   │   │   │   ├── Header.tsx      # Navigation
+│   │   │   │   └── Footer.tsx      # Pied de page
+│   │   │   ├── chat/
+│   │   │   │   └── ChatWidget.tsx  # Widget chatbot
+│   │   │   ├── packages/
+│   │   │   │   └── PackageCard.tsx # Carte package
+│   │   │   └── Layout.tsx          # Layout principal
+│   │   ├── pages/
+│   │   │   ├── Home.tsx            # Accueil
+│   │   │   ├── Search.tsx          # Recherche
+│   │   │   ├── Hotels.tsx          # Hotels TripAdvisor
+│   │   │   ├── Bookings.tsx        # Réservations
+│   │   │   ├── Login.tsx           # Connexion
+│   │   │   └── SignUp.tsx          # Inscription
+│   │   ├── services/
+│   │   │   ├── api.ts              # Client API backend
+│   │   │   ├── supabase.ts         # Client Supabase
+│   │   │   └── tripadvisor.ts      # Service TripAdvisor
+│   │   ├── contexts/
+│   │   │   └── AuthContext.tsx     # Context auth
+│   │   ├── hooks/
+│   │   │   └── useChat.ts          # Hook chat
+│   │   ├── types/
+│   │   │   └── index.ts            # Types TypeScript
+│   │   ├── App.tsx                 # Routes
+│   │   ├── main.tsx                # Entry point
+│   │   └── index.css               # Styles Tailwind
+│   ├── package.json
+│   ├── vite.config.ts
+│   ├── tailwind.config.js
+│   ├── tsconfig.json
+│   └── Dockerfile
+│
+├── supabase/
+│   ├── config.toml                 # Config Supabase
+│   └── migrations/
+│       ├── 20260115000000_initial_schema.sql
+│       └── 20260116000000_tripadvisor_import.sql
+│
+├── scripts/
+│   └── tripadvise.ipynb            # Script import TripAdvisor
+│
+├── .env                            # Variables d'environnement
+├── .gitignore
+├── compose.yaml                    # Docker Compose
+├── CLAUDE.md                       # Instructions Claude Code
+└── README.md                       # Ce fichier
+```
+
+---
+
+## Installation
+
+### Prérequis
+
+- **Docker Desktop** (v24+)
+- **Node.js** (v20+)
+- **Git**
+
+### Étape 1 : Cloner le repository
+
+```bash
+git clone <repository-url>
+cd ui-automation-a2a
+```
+
+### Étape 2 : Installer Supabase CLI
+
+```bash
+npm install -g supabase
+```
+
+### Étape 3 : Démarrer Supabase local
+
+```bash
+npx supabase start
+```
+
+Attendre que tous les services démarrent (~2 minutes la première fois).
+
+### Étape 4 : Récupérer les clés
+
+```bash
+npx supabase status
+```
+
+Copier les valeurs `anon key` et `service_role key`.
+
+---
+
+## Configuration
+
+Créer un fichier `.env` à la racine du projet :
+
+```env
+# =============================================
+# VacanceAI - Environment Variables
+# =============================================
+
+# Supabase Local (from: npx supabase status)
+SUPABASE_URL=http://127.0.0.1:54321
+
+# Authentication Keys
+ANON_KEY=<votre_anon_key>
+SERVICE_ROLE_KEY=<votre_service_role_key>
+
+# Database
+DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres
+
+# Google AI (Gemini)
+GOOGLE_API_KEY=<votre_gemini_api_key>
+```
+
+---
+
+## Lancement
+
+### Avec Docker (recommandé)
+
+```bash
+# Appliquer les migrations
+npx supabase db reset
+
+# Construire et lancer
+docker compose up --build
+
+# Ou en arrière-plan
+docker compose up -d --build
+```
+
+### URLs disponibles
+
+| Service | URL | Description |
+|---------|-----|-------------|
+| Frontend | http://localhost:5173 | Application React |
+| Backend API | http://localhost:8080 | API FastAPI |
+| Supabase Studio | http://localhost:54323 | Admin DB |
+| Supabase API | http://localhost:54321 | API Supabase |
+
+### Commandes Docker
+
+```bash
+# Voir les logs
+docker compose logs -f
+
+# Logs d'un service spécifique
+docker compose logs -f backend
+docker compose logs -f frontend
+
+# Arrêter
+docker compose down
+
+# Reconstruire un service
+docker compose up --build backend
+
+# Redémarrer
+docker compose restart
+```
+
+---
+
+## Base de données
+
+### Schéma principal
+
+#### `destinations`
+| Colonne | Type | Description |
+|---------|------|-------------|
+| id | UUID | Identifiant unique |
+| name | TEXT | Nom de la destination |
+| country | TEXT | Pays |
+| city | TEXT | Ville |
+| description | TEXT | Description |
+| image_url | TEXT | Image principale |
+| tags | TEXT[] | Tags (plage, montagne...) |
+| average_rating | DECIMAL | Note moyenne |
+
+#### `packages`
+| Colonne | Type | Description |
+|---------|------|-------------|
+| id | UUID | Identifiant unique |
+| destination_id | UUID | FK destination |
+| name | TEXT | Nom du package |
+| description | TEXT | Description |
+| duration_days | INT | Durée en jours |
+| price_per_person | DECIMAL | Prix par personne |
+| max_persons | INT | Nombre max de personnes |
+| includes | JSONB | Ce qui est inclus |
+| available_from | DATE | Disponible à partir de |
+| available_to | DATE | Disponible jusqu'à |
+| is_active | BOOLEAN | Actif ou non |
+| images | TEXT[] | URLs des images |
+
+#### `bookings`
+| Colonne | Type | Description |
+|---------|------|-------------|
+| id | UUID | Identifiant unique |
+| user_id | UUID | FK utilisateur |
+| package_id | UUID | FK package |
+| status | TEXT | pending/confirmed/cancelled/completed |
+| start_date | DATE | Date de début |
+| end_date | DATE | Date de fin |
+| num_persons | INT | Nombre de personnes |
+| total_price | DECIMAL | Prix total |
+| payment_status | TEXT | unpaid/paid/refunded |
+
+### Tables TripAdvisor
+
+#### `tripadvisor_locations`
+| Colonne | Type | Description |
+|---------|------|-------------|
+| id | UUID | Identifiant unique |
+| location_id | TEXT | ID TripAdvisor |
+| name | TEXT | Nom de l'hotel |
+| address_obj | JSONB | Adresse complète |
+| search_country | TEXT | Pays de recherche |
+| category | TEXT | hotels/restaurants/attractions |
+
+#### `tripadvisor_photos`
+| Colonne | Type | Description |
+|---------|------|-------------|
+| id | UUID | Identifiant unique |
+| location_id | TEXT | FK location |
+| photo_id | TEXT | ID photo TripAdvisor |
+| url_original | TEXT | URL originale |
+| url_large | TEXT | URL grande taille |
+| url_medium | TEXT | URL moyenne taille |
+| url_small | TEXT | URL petite taille |
+| caption | TEXT | Légende |
+| storage_path | TEXT | Chemin Supabase Storage |
+
+#### `tripadvisor_reviews`
+| Colonne | Type | Description |
+|---------|------|-------------|
+| id | UUID | Identifiant unique |
+| location_id | TEXT | FK location |
+| review_id | TEXT | ID review TripAdvisor |
+| rating | INT | Note (1-5) |
+| title | TEXT | Titre |
+| text | TEXT | Contenu |
+| published_date | TEXT | Date de publication |
+| user_name | TEXT | Nom de l'auteur |
+
+### Row Level Security (RLS)
+
+- **Destinations & Packages** : Lecture publique
+- **Bookings & Favorites** : L'utilisateur accède uniquement à ses données
+- **Reviews** : Lecture publique, création authentifiée
+- **Conversations** : L'utilisateur accède uniquement à ses conversations
+- **TripAdvisor** : Lecture publique
+
+---
+
+## API Backend
+
+### Authentification
+
+```
+POST /api/auth/signup
+POST /api/auth/login
+POST /api/auth/logout
+GET  /api/auth/me
+```
+
+### Destinations
+
+```
+GET /api/destinations
+GET /api/destinations/{id}
+```
+
+### Packages
+
+```
+GET  /api/packages                    # Liste avec filtres
+GET  /api/packages/featured           # Packages populaires
+GET  /api/packages/{id}               # Détails
+GET  /api/packages/{id}/availability  # Vérifier disponibilité
+```
+
+**Paramètres de recherche :**
+- `destination` : ID destination
+- `min_price`, `max_price` : Fourchette de prix
+- `min_duration`, `max_duration` : Durée
+- `start_date` : Date de départ
+- `limit`, `offset` : Pagination
+
+### Réservations
+
+```
+GET   /api/bookings           # Mes réservations
+GET   /api/bookings/{id}      # Détails
+POST  /api/bookings           # Créer
+PATCH /api/bookings/{id}      # Modifier
+DELETE /api/bookings/{id}     # Annuler
+```
+
+### Favoris
+
+```
+GET    /api/favorites                 # Mes favoris
+POST   /api/favorites/{package_id}    # Ajouter
+DELETE /api/favorites/{package_id}    # Supprimer
+GET    /api/favorites/check/{id}      # Vérifier si favori
+```
+
+### Conversations (Chat IA)
+
+```
+POST /api/conversations/new              # Nouvelle conversation
+GET  /api/conversations/{id}             # Récupérer
+POST /api/conversations/{id}/message     # Envoyer message
+DELETE /api/conversations/{id}           # Supprimer
+```
+
+### Health
+
+```
+GET /api/health    # Status de l'API
+```
+
+---
+
+## Frontend
+
+### Pages
+
+| Route | Page | Description |
+|-------|------|-------------|
+| `/` | Home | Accueil avec packages populaires |
+| `/search` | Search | Recherche avec filtres |
+| `/hotels` | Hotels | Hotels TripAdvisor |
+| `/bookings` | Bookings | Mes réservations |
+| `/login` | Login | Connexion |
+| `/signup` | SignUp | Inscription |
+
+### Composants principaux
+
+- **Layout** : Structure commune (Header + contenu + Footer)
+- **Header** : Navigation avec menu responsive
+- **ChatWidget** : Widget de chat flottant (IA)
+- **PackageCard** : Carte d'affichage d'un package
+
+### Services
+
+- **api.ts** : Client Axios pour le backend
+- **supabase.ts** : Client Supabase direct
+- **tripadvisor.ts** : Service données TripAdvisor
+
+---
+
+## Import TripAdvisor
+
+### Prérequis
+
+- Clé API TripAdvisor Content API
+- Jupyter ou VS Code avec extension Jupyter
+
+### Exécution
+
+1. Ouvrir `scripts/tripadvise.ipynb`
+
+2. **Cellule 1** : Importer les hotels
+   - Configure la liste des pays
+   - Fetch les hotels via l'API
+   - Résultat : DataFrame `df`
+
+3. **Cellule 2** : Importer les photos
+   - Boucle sur les `location_id`
+   - Résultat : DataFrame `df_photos`
+
+4. **Cellule 3** : Importer les reviews
+   - Boucle sur les `location_id`
+   - Résultat : DataFrame `df_reviews`
+
+5. **Cellule 4** : Connexion Supabase
+   - Initialise le client
+
+6. **Cellule 5-7** : Insert dans Supabase
+   - Insert locations, photos, reviews
+
+7. **Cellule 8** (optionnel) : Upload images
+   - Télécharge et stocke dans Supabase Storage
+
+### Headers requis
+
+L'API TripAdvisor nécessite ces headers :
+
+```python
+headers = {
+    "accept": "application/json",
+    "Referer": "https://tripadvisor-content-api.readme.io/",
+    "Origin": "https://tripadvisor-content-api.readme.io"
+}
+```
+
+---
+
+## Protocole A2A
+
+Le backend utilise le protocole Agent-to-Agent (A2A) de Google pour la coordination des agents IA.
+
+### Agents disponibles
+
+| Agent | Description |
+|-------|-------------|
+| **Orchestrator** | Coordonne les autres agents |
+| **Database** | Requêtes Supabase |
+| **UI** | Actions interface utilisateur |
+
+### Endpoints A2A
+
+```
+GET  /.well-known/agent.json    # Agent Card (métadonnées)
+POST /a2a/tasks                  # Créer une tâche
+GET  /a2a/tasks/{id}            # Status d'une tâche
+POST /a2a/tasks/{id}/messages   # Envoyer un message
+POST /a2a/tasks/{id}/cancel     # Annuler une tâche
+```
+
+### Agent Card
+
+```json
+{
+  "name": "vacanceai-orchestrator",
+  "description": "VacanceAI main orchestrator agent",
+  "url": "http://localhost:8080",
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": true,
+    "push_notifications": false
+  },
+  "skills": [
+    {
+      "id": "search_packages",
+      "name": "Search Packages",
+      "description": "Search vacation packages"
+    }
+  ]
+}
+```
+
+---
+
+## Développement
+
+### Sans Docker
+
+#### Backend
+
+```bash
+cd backend
+
+# Créer environnement virtuel
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+.\venv\Scripts\activate   # Windows
+
+# Installer dépendances
+pip install -r requirements.txt
+
+# Lancer
+uvicorn api.main:app --reload --port 8000
+```
+
+#### Frontend
+
+```bash
+cd frontend
+
+# Installer dépendances
+npm install
+
+# Lancer
+npm run dev
+```
+
+### Tests
+
+```bash
+# Backend
+cd backend
+pytest
+
+# Frontend
+cd frontend
+npm run test
+```
+
+### Linting
+
+```bash
+# Frontend
+cd frontend
+npm run lint
+```
+
+---
+
+## Troubleshooting
+
+### Erreur "Module not found"
+
+```bash
+docker compose down
+docker compose up --build
+```
+
+### Erreur Supabase 502
+
+```bash
+npx supabase stop
+npx supabase start
+```
+
+### Erreur CORS
+
+Vérifier que `FRONTEND_URL` dans compose.yaml correspond à l'URL du frontend.
+
+### Reset complet
+
+```bash
+docker compose down -v
+npx supabase stop
+npx supabase start
+npx supabase db reset
+docker compose up --build
+```
+
+---
+
+## Licence
+
+MIT
+
+---
+
+## Auteurs
+
+VacanceAI Team
