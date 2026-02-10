@@ -100,3 +100,9 @@ An in-memory state store (LangGraph MemorySaver) that persists the AI agent's co
 
 ### A2A (Agent-to-Agent)
 A protocol for inter-agent communication. Defines an AgentCard (discovery), tasks with input/output, and state lifecycle (pending, running, completed, failed, cancelled).
+
+### LoggingConfig
+A centralized logging setup (`backend/logging_config.py`) that configures four rotating log files: `app.log` (general), `agents.log` (AI agent activity), `sql.log` (database queries), and `errors.log` (errors only). Initialized at FastAPI startup via `setup_logging()`. Output is written to `backend/log_apps/` and mounted via K8s hostPath volume to the local repo.
+
+### SetupScript
+An automated PowerShell script (`setup.ps1`) that deploys the full stack in sequence: prerequisites check, Oracle startup, schema init, Docker image builds, Ingress NGINX installation, K8s secrets generation from `.env`, manifest deployment, and pod readiness wait. Supports `-SkipOracle`, `-SkipBuild`, `-SkipSchema` flags.

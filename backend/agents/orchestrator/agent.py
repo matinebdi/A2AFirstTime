@@ -7,7 +7,7 @@ from enum import Enum
 import logging
 import traceback
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("agents.orchestrator")
 
 from agents.base import get_llm
 from agents.database.agent import invoke_database_agent
@@ -122,6 +122,7 @@ async def handle_ui_agent(state: OrchestratorState) -> OrchestratorState:
 def route_to_agent(state: OrchestratorState) -> Literal["database", "ui"]:
     """Route to the appropriate agent based on classification"""
     agent_type = classify_request(state)
+    logger.info("Routing request to '%s' agent | message='%s'", agent_type, state["message"][:100])
     return agent_type
 
 

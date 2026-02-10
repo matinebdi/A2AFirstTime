@@ -40,6 +40,12 @@ A traveler wants to browse hotel information sourced from TripAdvisor for their 
 ### 9. Secure Account Management
 A traveler wants to create an account, log in securely, manage their profile (name, phone, avatar), and have their session persist across visits via refresh tokens.
 
+### 10. Automated Deployment
+A developer wants to deploy the full stack (Oracle database, backend, frontend, Kubernetes) with a single command (`setup.ps1`). The script handles prerequisites check, database startup, schema initialization, Docker image builds, Ingress controller installation, secrets generation, and K8s deployment.
+
+### 11. Application Logging and Debugging
+A developer wants to monitor application health and debug issues through centralized log files. Four rotating log files (app, agents, sql, errors) are written to `backend/log_apps/` and mounted to the local repo via a Kubernetes hostPath volume for real-time access.
+
 ## Key User Flows
 
 ### Flow 1: Search and Book via UI

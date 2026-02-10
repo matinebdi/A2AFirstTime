@@ -53,6 +53,9 @@ spec:
                 secretKeyRef:
                   name: vacanceai-secrets
                   key: GOOGLE_API_KEY
+          volumeMounts:
+            - name: log-apps
+              mountPath: /app/log_apps
           resources:
             requests:
               memory: "256Mi"
@@ -75,6 +78,11 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 6
+      volumes:
+        - name: log-apps
+          hostPath:
+            path: /run/desktop/mnt/host/c/Users/matin/Documents/Dockerisation/Projet1/ui-automation-a2a/backend/log_apps
+            type: DirectoryOrCreate
 ---
 apiVersion: v1
 kind: Service

@@ -1,10 +1,12 @@
 """Oracle Database client for VacanceAI"""
 
+import logging
 import oracledb
 from contextlib import contextmanager
 from typing import List, Dict, Any, Optional
 from config import settings
 
+logger = logging.getLogger("database")
 
 # Connection pool (initialized at startup)
 _pool: Optional[oracledb.ConnectionPool] = None
@@ -22,7 +24,7 @@ def init_pool():
         increment=1,
         mode=oracledb.SYSDBA if settings.oracle_user.upper() == "SYS" else 0,
     )
-    print(f"Oracle pool initialized: {settings.oracle_host}:{settings.oracle_port}/{settings.oracle_service}")
+    logger.info("Oracle pool initialized: %s:%s/%s", settings.oracle_host, settings.oracle_port, settings.oracle_service)
 
 
 def close_pool():
@@ -31,7 +33,7 @@ def close_pool():
     if _pool:
         _pool.close()
         _pool = None
-        print("Oracle pool closed")
+        logger.info("Oracle pool closed")
 
 
 @contextmanager
@@ -68,10 +70,17 @@ def _rows_to_dicts(cursor) -> List[Dict[str, Any]]:
 
 def execute_query(sql: str, params: Optional[Dict] = None) -> List[Dict[str, Any]]:
     """Execute a SELECT query and return results as list of dicts."""
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute(sql, params or {})
-        return _rows_to_dicts(cursor)
+    logger.debug("SQL SELECT: %s | params=%s", sql[:200], params)
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(sql, params or {})
+            results = _rows_to_dicts(cursor)
+            logger.debug("SQL SELECT returned %d rows", len(results))
+            return results
+    except Exception as e:
+        logger.error("SQL SELECT failed: %s | sql=%s", e, sql[:200])
+        raise
 
 
 def execute_query_single(sql: str, params: Optional[Dict] = None) -> Optional[Dict[str, Any]]:
@@ -85,18 +94,26 @@ def execute_insert(sql: str, params: Optional[Dict] = None, returning: Optional[
 
     If returning is specified, uses RETURNING INTO to get the generated value.
     """
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        if returning:
-            out_var = cursor.var(oracledb.STRING)
-            sql_with_returning = f"{sql} RETURNING {returning} INTO :out_id"
-            params = params or {}
-            params["out_id"] = out_var
-            cursor.execute(sql_with_returning, params)
-            return out_var.getvalue()[0]
-        else:
-            cursor.execute(sql, params or {})
-            return None
+    logger.debug("SQL INSERT: %s | params=%s", sql[:200], params)
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            if returning:
+                out_var = cursor.var(oracledb.STRING)
+                sql_with_returning = f"{sql} RETURNING {returning} INTO :out_id"
+                params = params or {}
+                params["out_id"] = out_var
+                cursor.execute(sql_with_returning, params)
+                val = out_var.getvalue()[0]
+                logger.info("SQL INSERT OK, returning=%s", val)
+                return val
+            else:
+                cursor.execute(sql, params or {})
+                logger.info("SQL INSERT OK")
+                return None
+    except Exception as e:
+        logger.error("SQL INSERT failed: %s | sql=%s", e, sql[:200])
+        raise
 
 
 def execute_insert_returning_row(sql: str, params: Optional[Dict] = None, table: str = None, id_col: str = "id") -> Optional[Dict[str, Any]]:
@@ -109,18 +126,30 @@ def execute_insert_returning_row(sql: str, params: Optional[Dict] = None, table:
 
 def execute_update(sql: str, params: Optional[Dict] = None) -> int:
     """Execute an UPDATE and return the number of rows affected."""
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute(sql, params or {})
-        return cursor.rowcount
+    logger.debug("SQL UPDATE: %s | params=%s", sql[:200], params)
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(sql, params or {})
+            logger.info("SQL UPDATE OK, rows=%d", cursor.rowcount)
+            return cursor.rowcount
+    except Exception as e:
+        logger.error("SQL UPDATE failed: %s | sql=%s", e, sql[:200])
+        raise
 
 
 def execute_delete(sql: str, params: Optional[Dict] = None) -> int:
     """Execute a DELETE and return the number of rows affected."""
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute(sql, params or {})
-        return cursor.rowcount
+    logger.debug("SQL DELETE: %s | params=%s", sql[:200], params)
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(sql, params or {})
+            logger.info("SQL DELETE OK, rows=%d", cursor.rowcount)
+            return cursor.rowcount
+    except Exception as e:
+        logger.error("SQL DELETE failed: %s | sql=%s", e, sql[:200])
+        raise
 
 
 def execute_scalar(sql: str, params: Optional[Dict] = None) -> Any:

@@ -63,6 +63,7 @@ Application complete de reservation de vacances avec assistant IA, integration T
 | **IA** | Google Gemini (LangChain + LangGraph) |
 | **Auth** | JWT custom (PyJWT + passlib bcrypt) |
 | **Observabilite** | OpenTelemetry, Jaeger |
+| **Logging** | RotatingFileHandler (app, agents, sql, errors) |
 | **Conteneurisation** | Docker Compose (DB) + Kubernetes (app) |
 
 ---
@@ -84,6 +85,7 @@ Application complete de reservation de vacances avec assistant IA, integration T
   │   │   :8000      │  │   :80        │  │   :16686     │  │
   │   └──────┬───────┘  └──────────────┘  └──────────────┘  │
   │          │ oracledb (thin)                               │
+  │          │ log_apps/ (hostPath volume -> repo local)     │
   └──────────┼───────────────────────────────────────────────┘
              │ host.docker.internal:1521
   ┌──────────▼───────────────────────────────────────────────┐
@@ -129,6 +131,12 @@ ui-automation-a2a/
 │   │   ├── oracle_client.py        # Client Oracle (oracledb thin)
 │   │   ├── oracle_schema.sql       # Schema complet (11 tables)
 │   │   └── queries.py              # Requetes SQL centralisees
+│   ├── logging_config.py           # Logging centralise (RotatingFileHandler -> log_apps/)
+│   ├── log_apps/                   # Fichiers logs (montes via volume K8s hostPath)
+│   │   ├── app.log                 # Logs generaux (INFO+)
+│   │   ├── agents.log              # Activite agents IA (DEBUG+)
+│   │   ├── sql.log                 # Requetes SQL (DEBUG+)
+│   │   └── errors.log              # Erreurs uniquement (ERROR+)
 │   ├── config.py                   # Configuration (pydantic-settings)
 │   ├── telemetry.py                # OpenTelemetry setup
 │   ├── requirements.txt
@@ -170,6 +178,12 @@ ui-automation-a2a/
 │   ├── frontend.yaml
 │   └── ingress.yaml
 │
+├── docs/                           # Documentation DDD
+│   ├── functional-description.md   # Description fonctionnelle
+│   ├── ubiquitous-language.md      # Langage ubiquitaire
+│   └── domain-model.md             # Modele de domaine (UML Mermaid)
+│
+├── setup.ps1                       # Setup automatique (Oracle + build + K8s)
 ├── .env                            # Variables d'environnement
 ├── compose.yaml                    # Docker Compose (Oracle uniquement)
 └── README.md
@@ -186,20 +200,50 @@ ui-automation-a2a/
 - **Git**
 - **Python 3.12+** (pour le script de seed)
 
-### Etape 1 : Cloner le repository
+### Option A : Setup automatique (recommande)
+
+```powershell
+# Cloner le repo
+git clone https://github.com/matinebdi/A2AFirstTime.git
+cd A2AFirstTime
+
+# Creer le volume Oracle
+docker volume create oracle-xe-data
+
+# Configurer .env (voir section Configuration)
+
+# Lancer le setup complet
+.\setup.ps1
+```
+
+Le script `setup.ps1` execute automatiquement :
+1. Verification des prerequis (Docker, kubectl, K8s, .env)
+2. Demarrage Oracle (docker compose) + healthcheck
+3. Initialisation du schema Oracle
+4. Build des images Docker (backend + frontend)
+5. Installation Ingress NGINX Controller
+6. Generation des secrets K8s depuis .env
+7. Deploiement des manifests Kubernetes
+8. Attente que les pods soient Ready
+
+Flags optionnels : `-SkipOracle`, `-SkipBuild`, `-SkipSchema`
+
+### Option B : Setup manuel
+
+#### Etape 1 : Cloner le repository
 
 ```bash
 git clone https://github.com/matinebdi/A2AFirstTime.git
 cd A2AFirstTime
 ```
 
-### Etape 2 : Creer le volume Oracle
+#### Etape 2 : Creer le volume Oracle
 
 ```bash
 docker volume create oracle-xe-data
 ```
 
-### Etape 3 : Installer l'Ingress NGINX Controller
+#### Etape 3 : Installer l'Ingress NGINX Controller
 
 ```bash
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.12.0/deploy/static/provider/cloud/deploy.yaml
@@ -550,9 +594,45 @@ L'agent IA connait la page que l'utilisateur consulte et les donnees affichees. 
 
 ### Comportement apres reservation
 
-Quand l'agent confirme une reservation via le chat, le frontend :
-1. Affiche une notification de succes (1.5s)
-2. Navigue automatiquement vers la page Reservations
+Quand l'agent confirme une reservation via le chat, le frontend navigue automatiquement vers la page Reservations (`/bookings`).
+
+---
+
+## Logging
+
+Le backend dispose d'un systeme de logging centralise qui ecrit dans `backend/log_apps/`.
+
+### Fichiers de logs
+
+| Fichier | Contenu | Niveau |
+|---------|---------|--------|
+| `app.log` | Logs generaux de l'application | INFO+ |
+| `agents.log` | Activite des agents IA (orchestrateur, UI, database) | DEBUG+ |
+| `sql.log` | Toutes les requetes SQL (SELECT, INSERT, UPDATE, DELETE) | DEBUG+ |
+| `errors.log` | Erreurs de tous les loggers | ERROR+ |
+
+### Configuration
+
+- **Fichier** : `backend/logging_config.py`
+- **Rotation** : 5 MB max par fichier, 3 backups
+- **Volume K8s** : hostPath monte depuis le pod vers `backend/log_apps/` local
+- Les logs sont disponibles en temps reel dans le repo local
+
+### Consultation
+
+```bash
+# Logs generaux
+cat backend/log_apps/app.log
+
+# Requetes SQL
+cat backend/log_apps/sql.log
+
+# Activite des agents IA
+cat backend/log_apps/agents.log
+
+# Erreurs uniquement
+cat backend/log_apps/errors.log
+```
 
 ---
 

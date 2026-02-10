@@ -74,6 +74,7 @@ monitoring/prometheus/data/
 
 # Logs
 logs/
+log_apps/
 *.log
 agent_*.log
 

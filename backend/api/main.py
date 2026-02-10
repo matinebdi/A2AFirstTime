@@ -1,12 +1,16 @@
 """VacanceAI Backend - Main FastAPI Application"""
 
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from config import settings
+from logging_config import setup_logging
 from database.oracle_client import init_pool, close_pool
 from telemetry import init_telemetry
+
+logger = logging.getLogger("vacanceai")
 from .routes import health, auth, destinations, packages, bookings, favorites, reviews, conversations, tripadvisor
 from a2a.server import a2a_router, AGENT_CARD
 
@@ -15,12 +19,13 @@ from a2a.server import a2a_router, AGENT_CARD
 async def lifespan(app: FastAPI):
     """Application lifespan events"""
     # Startup
-    print(f"Starting {settings.app_name} API...")
+    setup_logging()
+    logger.info("Starting %s API...", settings.app_name)
     init_pool()
     init_telemetry(app)
     yield
     # Shutdown
-    print(f"Shutting down {settings.app_name} API...")
+    logger.info("Shutting down %s API...", settings.app_name)
     close_pool()
 
 

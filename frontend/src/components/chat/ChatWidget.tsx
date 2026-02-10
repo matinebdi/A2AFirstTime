@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MessageCircle, X, Send, Loader2, WifiOff, MapPin, CheckCircle, Calendar, Users } from 'lucide-react';
+import { MessageCircle, X, Send, Loader2, WifiOff, MapPin } from 'lucide-react';
 import { useChat } from '../../hooks/useChat';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePageContext } from '../../contexts/PageContext';
@@ -55,45 +55,6 @@ const MiniPackageCard: React.FC<{ pkg: PackageData; onClick: () => void }> = ({ 
   );
 };
 
-interface BookingConfirmation {
-  id: string;
-  total_price: number;
-  status: string;
-  start_date: string;
-  num_persons: number;
-  package_name: string;
-  package_image?: string;
-  destination_name?: string;
-}
-
-const BookingConfirmationCard: React.FC<{ booking: BookingConfirmation; onViewBookings: () => void }> = ({ booking, onViewBookings }) => (
-  <div className="bg-green-50 border border-green-200 rounded-lg p-3 mt-2">
-    <div className="flex items-center gap-2 mb-2">
-      <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
-      <span className="text-sm font-semibold text-green-800">Réservation confirmée !</span>
-    </div>
-    <div className="flex gap-2">
-      {booking.package_image && (
-        <img src={booking.package_image} alt={booking.package_name} className="w-14 h-14 rounded-md object-cover flex-shrink-0" />
-      )}
-      <div className="min-w-0 flex-1 text-xs text-gray-700 space-y-0.5">
-        <p className="font-medium text-gray-900 truncate">{booking.package_name}</p>
-        {booking.destination_name && (
-          <p className="flex items-center gap-0.5"><MapPin className="h-3 w-3" />{booking.destination_name}</p>
-        )}
-        <p className="flex items-center gap-0.5"><Calendar className="h-3 w-3" />{booking.start_date}</p>
-        <p className="flex items-center gap-0.5"><Users className="h-3 w-3" />{booking.num_persons} personne(s)</p>
-        <p className="font-semibold text-green-700">{booking.total_price}€ total</p>
-      </div>
-    </div>
-    <button
-      onClick={onViewBookings}
-      className="mt-2 w-full text-xs bg-green-600 text-white py-1.5 rounded-md hover:bg-green-700 transition"
-    >
-      Voir mes réservations
-    </button>
-  </div>
-);
 
 const PackageCards: React.FC<{ packages: PackageData[]; onSelect: (id: string) => void }> = ({ packages, onSelect }) => {
   if (!packages || packages.length === 0) return null;
@@ -157,8 +118,7 @@ export const ChatWidget: React.FC = () => {
         // Packages are rendered inline via cards - no navigation needed
         break;
       case 'booking_confirmed':
-        setNotification(action.message as string || 'Réservation confirmée !');
-        setTimeout(() => navigate('/bookings'), 1500);
+        navigate('/bookings');
         break;
       case 'add_favorite':
         if (action.package_id && user) {
@@ -212,15 +172,6 @@ export const ChatWidget: React.FC = () => {
     return packages;
   };
 
-  const getBookingConfirmation = (msg: ChatMessage): BookingConfirmation | null => {
-    if (!msg.ui_actions) return null;
-    for (const action of msg.ui_actions) {
-      if (action.action === 'booking_confirmed' && action.booking) {
-        return action.booking as BookingConfirmation;
-      }
-    }
-    return null;
-  };
 
   const handlePackageSelect = (packageId: string) => {
     navigate(`/packages/${packageId}`);
@@ -299,7 +250,6 @@ export const ChatWidget: React.FC = () => {
 
               {messages.map((msg, index) => {
                 const packages = msg.role === 'assistant' ? getPackagesFromActions(msg) : [];
-                const bookingConfirmation = msg.role === 'assistant' ? getBookingConfirmation(msg) : null;
                 return (
                   <div key={index}>
                     <div
@@ -320,14 +270,6 @@ export const ChatWidget: React.FC = () => {
                     {packages.length > 0 && (
                       <div className="mt-2 ml-1">
                         <PackageCards packages={packages} onSelect={handlePackageSelect} />
-                      </div>
-                    )}
-                    {bookingConfirmation && (
-                      <div className="mt-2 ml-1 max-w-[80%]">
-                        <BookingConfirmationCard
-                          booking={bookingConfirmation}
-                          onViewBookings={() => navigate('/bookings')}
-                        />
                       </div>
                     )}
                   </div>

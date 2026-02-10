@@ -119,7 +119,7 @@ def get_package_details(package_id: str) -> dict:
 
     # Get reviews
     review_rows = execute_query(
-        "SELECT r.id, r.user_id, r.package_id, r.booking_id, r.rating, r.review_comment AS comment, r.created_at, r.updated_at, u.first_name, u.last_name FROM reviews r JOIN users u ON r.user_id = u.id WHERE r.package_id = :package_id ORDER BY r.created_at DESC",
+        'SELECT r.id, r.user_id, r.package_id, r.booking_id, r.rating, r.review_comment AS "comment", r.created_at, r.updated_at, u.first_name, u.last_name FROM reviews r JOIN users u ON r.user_id = u.id WHERE r.package_id = :package_id ORDER BY r.created_at DESC',
         {"package_id": package_id}
     )
     package["reviews"] = [format_review_with_user(r) for r in review_rows]

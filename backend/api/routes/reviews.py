@@ -88,7 +88,7 @@ async def create_review(
     })
 
     result = execute_query_single(
-        "SELECT r.id, r.user_id, r.package_id, r.booking_id, r.rating, r.review_comment AS comment, r.created_at, r.updated_at, u.first_name, u.last_name, u.avatar_url FROM reviews r JOIN users u ON r.user_id = u.id WHERE r.id = :id",
+        'SELECT r.id, r.user_id, r.package_id, r.booking_id, r.rating, r.review_comment AS "comment", r.created_at, r.updated_at, u.first_name, u.last_name, u.avatar_url FROM reviews r JOIN users u ON r.user_id = u.id WHERE r.id = :id',
         {"id": review_id}
     )
     result = format_review_with_user(result) if result else {"id": review_id}

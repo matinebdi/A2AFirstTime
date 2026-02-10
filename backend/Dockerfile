@@ -15,8 +15,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Create non-root user
-RUN adduser --disabled-password --gecos '' appuser
+# Create non-root user and log directory
+RUN adduser --disabled-password --gecos '' appuser \
+    && mkdir -p /app/log_apps \
+    && chown appuser:appuser /app/log_apps
 USER appuser
 
 # Expose port
