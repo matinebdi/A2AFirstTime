@@ -1,7 +1,9 @@
 """Authentication routes - JWT-based with Oracle"""
 
+import os
 import uuid
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, EmailStr
 from datetime import datetime, timezone
 
@@ -172,3 +174,52 @@ async def update_profile(
     result.pop("password_hash", None)
 
     return {"message": "Profile updated", "profile": result}
+
+
+AVATAR_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads", "avatars")
+ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+MAX_SIZE = 2 * 1024 * 1024  # 2 MB
+
+
+@router.post("/avatar")
+async def upload_avatar(
+    file: UploadFile = File(...),
+    user=Depends(get_current_user)
+):
+    """Upload user avatar image"""
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(status_code=400, detail="Format non supporte. Utilisez JPG, PNG ou WebP.")
+
+    content = await file.read()
+    if len(content) > MAX_SIZE:
+        raise HTTPException(status_code=400, detail="Image trop volumineuse (max 2 Mo)")
+
+    os.makedirs(AVATAR_DIR, exist_ok=True)
+
+    # Remove old avatar if exists
+    for old_ext in ALLOWED_EXTENSIONS:
+        old_path = os.path.join(AVATAR_DIR, f"{user.id}{old_ext}")
+        if os.path.exists(old_path):
+            os.remove(old_path)
+
+    filename = f"{user.id}{ext}"
+    filepath = os.path.join(AVATAR_DIR, filename)
+    with open(filepath, "wb") as f:
+        f.write(content)
+
+    avatar_url = f"/api/auth/avatar/{filename}"
+    execute_update(USER_UPDATE, {"id": user.id, "avatar_url": avatar_url})
+
+    return {"avatar_url": avatar_url}
+
+
+@router.get("/avatar/{filename}")
+async def get_avatar(filename: str):
+    """Serve avatar image"""
+    # Sanitize filename to prevent path traversal
+    safe_name = os.path.basename(filename)
+    filepath = os.path.join(AVATAR_DIR, safe_name)
+    if not os.path.exists(filepath):
+        raise HTTPException(status_code=404, detail="Avatar not found")
+    return FileResponse(filepath)

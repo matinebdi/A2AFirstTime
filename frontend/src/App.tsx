@@ -10,6 +10,7 @@ import { Bookings } from './pages/Bookings';
 import { Hotels } from './pages/Hotels';
 import { HotelDetail } from './pages/HotelDetail';
 import { PackageDetail } from './pages/PackageDetail';
+import { Profile } from './pages/Profile';
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
               <Route path="hotels" element={<Hotels />} />
               <Route path="hotels/:locationId" element={<HotelDetail />} />
               <Route path="bookings" element={<Bookings />} />
+              <Route path="profile" element={<Profile />} />
               <Route path="login" element={<Login />} />
               <Route path="signup" element={<SignUp />} />
             </Route>

@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Plane, Search, Heart, User, LogOut, Menu, X, Building2 } from 'lucide-react';
+import { Plane, Search, Heart, User, LogOut, Menu, X, Building2, Home, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -25,6 +25,13 @@ export const Header: React.FC = () => {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
+            <Link
+              to="/"
+              className="flex items-center text-gray-600 hover:text-blue-600 transition"
+            >
+              <Home className="h-5 w-5 mr-1" />
+              Accueil
+            </Link>
             <Link
               to="/search"
               className="flex items-center text-gray-600 hover:text-blue-600 transition"
@@ -95,7 +102,15 @@ export const Header: React.FC = () => {
             )}
           </nav>
 
-          {/* Mobile menu button */}
+          {/* Refresh + Mobile menu button */}
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => window.location.reload()}
+              className="p-2 text-gray-500 hover:text-blue-600 transition"
+              title="Rafraichir la page"
+            >
+              <RefreshCw className="h-5 w-5" />
+            </button>
           <button
             className="md:hidden p-2"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -106,12 +121,20 @@ export const Header: React.FC = () => {
               <Menu className="h-6 w-6" />
             )}
           </button>
+          </div>
         </div>
 
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
           <div className="md:hidden py-4 border-t">
             <nav className="flex flex-col space-y-4">
+              <Link
+                to="/"
+                className="text-gray-600 hover:text-blue-600"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Accueil
+              </Link>
               <Link
                 to="/search"
                 className="text-gray-600 hover:text-blue-600"

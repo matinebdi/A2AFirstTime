@@ -8,6 +8,8 @@ interface AuthContextType {
   signUp: (email: string, password: string, firstName: string, lastName: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  updateProfile: (data: { first_name?: string; last_name?: string; phone?: string }) => Promise<void>;
+  uploadAvatar: (file: File) => Promise<string>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -76,6 +78,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
   };
 
+  const updateProfile = async (data: { first_name?: string; last_name?: string; phone?: string }) => {
+    const profile = await authApi.updateProfile(data);
+    setUser({
+      id: profile.id,
+      email: profile.email,
+      first_name: profile.first_name,
+      last_name: profile.last_name,
+      phone: profile.phone,
+      created_at: profile.created_at,
+    });
+  };
+
+  const uploadAvatar = async (file: File): Promise<string> => {
+    const avatarUrl = await authApi.uploadAvatar(file);
+    setUser((prev) => prev ? { ...prev, avatar_url: avatarUrl } : prev);
+    return avatarUrl;
+  };
+
   const signOut = async () => {
     try {
       await authApi.logout();
@@ -88,7 +108,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, loading, signUp, signIn, signOut, updateProfile, uploadAvatar }}>
       {children}
     </AuthContext.Provider>
   );

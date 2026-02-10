@@ -91,6 +91,24 @@ export const authApi = {
     const { data } = await api.get('/api/auth/me');
     return data;
   },
+
+  updateProfile: async (profileData: {
+    first_name?: string;
+    last_name?: string;
+    phone?: string;
+  }): Promise<User> => {
+    const { data } = await api.patch('/api/auth/me', profileData);
+    return data.profile;
+  },
+
+  uploadAvatar: async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const { data } = await api.post('/api/auth/avatar', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return data.avatar_url;
+  },
 };
 
 // Destinations

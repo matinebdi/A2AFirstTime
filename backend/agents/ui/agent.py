@@ -168,9 +168,17 @@ async def invoke_ui_agent(
     # Extract response and actions
     last_message = result["messages"][-1]
 
-    # Extract UI actions from ToolMessage results (not tool_calls metadata)
+    # Extract UI actions only from the CURRENT turn's ToolMessages
+    # (messages after the last HumanMessage to avoid replaying old actions)
     ui_actions = []
-    for msg in result["messages"]:
+    all_msgs = result["messages"]
+    last_human_idx = -1
+    for i in range(len(all_msgs) - 1, -1, -1):
+        if isinstance(all_msgs[i], HumanMessage):
+            last_human_idx = i
+            break
+
+    for msg in all_msgs[last_human_idx + 1:]:
         if isinstance(msg, ToolMessage):
             try:
                 content = msg.content

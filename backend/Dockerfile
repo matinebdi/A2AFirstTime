@@ -17,8 +17,8 @@ COPY . .
 
 # Create non-root user and log directory
 RUN adduser --disabled-password --gecos '' appuser \
-    && mkdir -p /app/log_apps \
-    && chown appuser:appuser /app/log_apps
+    && mkdir -p /app/log_apps /app/uploads/avatars \
+    && chown -R appuser:appuser /app/log_apps /app/uploads
 USER appuser
 
 # Expose port
