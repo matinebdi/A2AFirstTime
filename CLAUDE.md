@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **Backend**: Python 3.12 / FastAPI / Uvicorn
 - **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS
-- **Database**: Oracle 21c XE (oracledb thin mode, connection pool)
+- **Database**: Oracle 21c XE (SQLAlchemy ORM + oracledb thin mode)
 - **AI**: Google Gemini 2.0 Flash (LangChain + LangGraph)
 - **Auth**: Custom JWT (PyJWT + passlib bcrypt)
 - **Observability**: OpenTelemetry + Jaeger
@@ -121,9 +121,10 @@ backend/
 │   ├── jwt_service.py          # JWT token service (PyJWT + bcrypt)
 │   └── middleware.py           # Auth middleware (get_current_user, get_optional_user)
 ├── database/
-│   ├── oracle_client.py        # Oracle connection pool (oracledb thin, with SQL logging)
-│   ├── oracle_schema.sql       # Full schema (11 tables + triggers)
-│   └── queries.py              # Centralized SQL + format helpers
+│   ├── models.py               # SQLAlchemy ORM models (11 models + to_dict methods)
+│   ├── session.py              # Engine + SessionLocal + get_db dependency
+│   ├── types.py                # Custom types (JSONEncodedCLOB, OracleBoolean)
+│   └── oracle_schema.sql       # Full schema (11 tables + triggers)
 ├── logging_config.py           # Centralized logging (RotatingFileHandler -> log_apps/)
 ├── log_apps/                   # Log output directory (mounted via K8s hostPath volume)
 │   ├── app.log                 # General app logs (INFO+)
@@ -175,20 +176,26 @@ frontend/src/
 └── main.tsx                    # Entry point
 ```
 
-## Database (Oracle 21c XE)
+## Database (Oracle 21c XE + SQLAlchemy ORM)
 
 - **Connection**: `localhost:1521/XE`, user `VACANCEAI` / `vacanceai`
 - **SYS password**: `admin`
 - **Schema**: `backend/database/oracle_schema.sql` (11 tables + triggers)
-- **Client**: `backend/database/oracle_client.py` (oracledb thin mode, connection pool)
-- **Queries**: `backend/database/queries.py` (centralized SQL + formatting helpers)
+- **ORM**: `backend/database/models.py` (11 SQLAlchemy models with relationships + `to_dict()` methods)
+- **Session**: `backend/database/session.py` (engine, `SessionLocal`, `get_db` FastAPI dependency, `create_session` for WebSocket/agents)
+- **Custom types**: `backend/database/types.py` (`JSONEncodedCLOB` for JSON<->CLOB, `OracleBoolean` for bool<->NUMBER(1))
 
 ### Key patterns
-- JSON stored in CLOB with `IS JSON` constraint; parsed with `parse_json_field()`
-- BOOLEAN -> NUMBER(1), UUID -> VARCHAR2(36) + SYS_GUID()
-- Pagination: `OFFSET :offset ROWS FETCH NEXT :limit ROWS ONLY`
-- JOINs returned as flat rows, reformatted in `queries.py` format_* helpers
-- Oracle reserved words (e.g. `COMMENT`) must be double-quoted in aliases: `AS "comment"`
+- JSON stored in CLOB; auto-serialized by `JSONEncodedCLOB` type decorator
+- BOOLEAN mapped via `OracleBoolean` type decorator (bool <-> NUMBER(1))
+- UUID -> VARCHAR2(36) + SYS_GUID() (server_default)
+- Relationships with `joinedload()` to avoid N+1 queries
+- `to_dict()`, `to_dict_with_destination()`, `to_dict_with_joins()` methods on models for API serialization
+- Decimal -> float conversion in `to_dict()` via `_f()` helper
+- Routes use `db: Session = Depends(get_db)` for session management
+- Agent tools use `create_session()` (manual session, try/finally)
+- WebSocket uses `create_session()` per message (not per connection)
+- `updated_at` managed by Oracle triggers, not SQLAlchemy
 
 ### Tables
 
@@ -220,7 +227,7 @@ frontend/src/
 - **K8s volume**: hostPath mount from pod `/app/log_apps` to local `backend/log_apps/`
 - **Loggers**:
   - `vacanceai` - General app logger (main.py)
-  - `database` - SQL queries logger (oracle_client.py) -> `sql.log`
+  - `database` + `sqlalchemy.engine` - SQL queries logger -> `sql.log`
   - `agents.*` - AI agent loggers (orchestrator, UI, database agents) -> `agents.log`
 - All errors from any logger also go to `errors.log`
 

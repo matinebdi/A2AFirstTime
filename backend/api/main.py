@@ -7,12 +7,12 @@ from contextlib import asynccontextmanager
 
 from config import settings
 from logging_config import setup_logging
-from database.oracle_client import init_pool, close_pool
+from database.session import init_engine, close_engine
 from telemetry import init_telemetry
 
 logger = logging.getLogger("vacanceai")
 from .routes import health, auth, destinations, packages, bookings, favorites, reviews, conversations, tripadvisor
-from a2a.server import a2a_router, AGENT_CARD
+from a2a.server import a2a_router
 
 
 @asynccontextmanager
@@ -21,12 +21,12 @@ async def lifespan(app: FastAPI):
     # Startup
     setup_logging()
     logger.info("Starting %s API...", settings.app_name)
-    init_pool()
+    init_engine()
     init_telemetry(app)
     yield
     # Shutdown
     logger.info("Shutting down %s API...", settings.app_name)
-    close_pool()
+    close_engine()
 
 
 app = FastAPI(

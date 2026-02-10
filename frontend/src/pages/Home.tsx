@@ -137,10 +137,10 @@ export const Home: React.FC = () => {
           <div className="flex justify-between items-center mb-8">
             <div>
               <h2 className="text-3xl font-bold text-gray-900">
-                Packages Populaires
+                Packages Premium
               </h2>
               <p className="text-gray-600 mt-2">
-                Nos destinations les plus appreciees
+                Nos packages les plus exclusifs
               </p>
             </div>
             <Link

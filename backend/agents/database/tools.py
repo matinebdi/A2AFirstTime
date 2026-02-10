@@ -1,19 +1,14 @@
-"""Database Agent Tools - CRUD operations for VacanceAI (Oracle)"""
+"""Database Agent Tools - CRUD operations for VacanceAI (SQLAlchemy ORM)"""
 
 import uuid
 from langchain_core.tools import tool
 from typing import Optional, List
 from datetime import datetime, timedelta
+from sqlalchemy.orm import joinedload
 
-from database.oracle_client import execute_query, execute_query_single, execute_insert, execute_delete
-from database.queries import (
-    PACKAGES_LIST_BASE, PACKAGE_BY_ID, PACKAGE_SIMPLE,
-    BOOKINGS_BY_USER, FAVORITES_BY_USER, FAVORITE_CHECK,
-    FAVORITE_INSERT, FAVORITE_DELETE, BOOKING_INSERT,
-    format_package_with_destination, format_package,
-    format_review_with_user, format_booking_with_joins,
-    format_favorite_with_joins, format_destination,
-    parse_json_field
+from database.session import create_session
+from database.models import (
+    Package, Destination, Booking, Favorite, Review,
 )
 
 
@@ -45,32 +40,32 @@ def search_packages(
     Returns:
         List of matching packages with destination details
     """
-    sql = PACKAGES_LIST_BASE
-    params = {}
+    db = create_session()
+    try:
+        query = (
+            db.query(Package)
+            .options(joinedload(Package.destination))
+            .filter(Package.is_active == True)
+        )
 
-    if min_price:
-        sql += " AND p.price_per_person >= :min_price"
-        params["min_price"] = min_price
-    if max_price:
-        sql += " AND p.price_per_person <= :max_price"
-        params["max_price"] = max_price
-    if min_duration:
-        sql += " AND p.duration_days >= :min_duration"
-        params["min_duration"] = min_duration
-    if max_duration:
-        sql += " AND p.duration_days <= :max_duration"
-        params["max_duration"] = max_duration
-    if start_date:
-        sql += " AND p.available_from <= TO_DATE(:start_date, 'YYYY-MM-DD')"
-        sql += " AND p.available_to >= TO_DATE(:start_date, 'YYYY-MM-DD')"
-        params["start_date"] = start_date
+        if min_price:
+            query = query.filter(Package.price_per_person >= min_price)
+        if max_price:
+            query = query.filter(Package.price_per_person <= max_price)
+        if min_duration:
+            query = query.filter(Package.duration_days >= min_duration)
+        if max_duration:
+            query = query.filter(Package.duration_days <= max_duration)
+        if start_date:
+            from sqlalchemy import func
+            date_val = func.to_date(start_date, 'YYYY-MM-DD')
+            query = query.filter(Package.available_from <= date_val)
+            query = query.filter(Package.available_to >= date_val)
 
-    sql += " ORDER BY p.price_per_person"
-    sql += " OFFSET 0 ROWS FETCH NEXT :limit ROWS ONLY"
-    params["limit"] = limit
-
-    rows = execute_query(sql, params)
-    packages = [format_package_with_destination(r) for r in rows]
+        rows = query.order_by(Package.price_per_person).limit(limit).all()
+        packages = [p.to_dict_with_destination() for p in rows]
+    finally:
+        db.close()
 
     # Filter by destination/country in Python
     if destination:
@@ -110,21 +105,33 @@ def get_package_details(package_id: str) -> dict:
     Returns:
         Package details with destination and reviews
     """
-    row = execute_query_single(PACKAGE_BY_ID, {"id": package_id})
+    db = create_session()
+    try:
+        pkg = (
+            db.query(Package)
+            .options(joinedload(Package.destination))
+            .filter(Package.id == package_id)
+            .first()
+        )
 
-    if not row:
-        return {"error": "Package not found"}
+        if not pkg:
+            return {"error": "Package not found"}
 
-    package = format_package_with_destination(row)
+        package = pkg.to_dict_with_destination()
 
-    # Get reviews
-    review_rows = execute_query(
-        'SELECT r.id, r.user_id, r.package_id, r.booking_id, r.rating, r.review_comment AS "comment", r.created_at, r.updated_at, u.first_name, u.last_name FROM reviews r JOIN users u ON r.user_id = u.id WHERE r.package_id = :package_id ORDER BY r.created_at DESC',
-        {"package_id": package_id}
-    )
-    package["reviews"] = [format_review_with_user(r) for r in review_rows]
+        # Get reviews
+        reviews = (
+            db.query(Review)
+            .options(joinedload(Review.user))
+            .filter(Review.package_id == package_id)
+            .order_by(Review.created_at.desc())
+            .all()
+        )
+        package["reviews"] = [r.to_dict_with_user() for r in reviews]
 
-    return package
+        return package
+    finally:
+        db.close()
 
 
 @tool
@@ -143,19 +150,21 @@ def get_destinations(
     Returns:
         List of destinations
     """
-    sql = "SELECT * FROM destinations"
-    params = {}
+    db = create_session()
+    try:
+        query = db.query(Destination)
 
-    if country:
-        sql += " WHERE UPPER(country) LIKE UPPER(:country)"
-        params["country"] = f"%{country}%"
+        if country:
+            query = query.filter(Destination.country.ilike(f"%{country}%"))
 
-    sql += " ORDER BY average_rating DESC NULLS LAST"
-    sql += " OFFSET 0 ROWS FETCH NEXT :limit ROWS ONLY"
-    params["limit"] = limit
-
-    rows = execute_query(sql, params)
-    destinations = [format_destination(r) for r in rows]
+        rows = (
+            query.order_by(Destination.average_rating.desc().nulls_last())
+            .limit(limit)
+            .all()
+        )
+        destinations = [d.to_dict() for d in rows]
+    finally:
+        db.close()
 
     if tags:
         destinations = [
@@ -189,40 +198,47 @@ def create_booking(
     Returns:
         Created booking details or error
     """
-    pkg = execute_query_single(PACKAGE_SIMPLE, {"id": package_id})
+    db = create_session()
+    try:
+        pkg = db.query(Package).filter(Package.id == package_id).first()
 
-    if not pkg:
-        return {"error": "Package not found"}
+        if not pkg:
+            return {"error": "Package not found"}
 
-    pkg = format_package(pkg)
+        if num_persons > pkg.max_persons:
+            return {"error": f"Maximum {pkg.max_persons} persons allowed"}
 
-    if num_persons > pkg["max_persons"]:
-        return {"error": f"Maximum {pkg['max_persons']} persons allowed"}
+        start = datetime.strptime(start_date, "%Y-%m-%d")
+        end = start + timedelta(days=pkg.duration_days)
+        total_price = float(pkg.price_per_person) * num_persons
 
-    start = datetime.strptime(start_date, "%Y-%m-%d")
-    end = start + timedelta(days=pkg["duration_days"])
-    total_price = float(pkg["price_per_person"]) * num_persons
+        booking_id = str(uuid.uuid4())
 
-    booking_id = str(uuid.uuid4())
+        new_booking = Booking(
+            id=booking_id,
+            user_id=user_id,
+            package_id=package_id,
+            start_date=start.date(),
+            end_date=end.date(),
+            num_persons=num_persons,
+            total_price=total_price,
+            special_requests=special_requests,
+            status="pending",
+            payment_status="unpaid",
+        )
+        db.add(new_booking)
+        db.commit()
 
-    execute_insert(BOOKING_INSERT, {
-        "id": booking_id,
-        "user_id": user_id,
-        "package_id": package_id,
-        "start_date": start_date,
-        "end_date": end.strftime("%Y-%m-%d"),
-        "num_persons": num_persons,
-        "total_price": total_price,
-        "special_requests": special_requests,
-        "status": "pending",
-        "payment_status": "unpaid"
-    })
-
-    return {
-        "success": True,
-        "booking": {"id": booking_id, "total_price": total_price, "status": "pending"},
-        "message": f"Booking created! Total: {total_price}€"
-    }
+        return {
+            "success": True,
+            "booking": {"id": booking_id, "total_price": total_price, "status": "pending"},
+            "message": f"Booking created! Total: {total_price}€"
+        }
+    except Exception as e:
+        db.rollback()
+        return {"error": str(e)}
+    finally:
+        db.close()
 
 
 @tool
@@ -239,17 +255,22 @@ def get_user_bookings(
     Returns:
         List of user's bookings
     """
-    sql = BOOKINGS_BY_USER
-    params = {"user_id": user_id}
+    db = create_session()
+    try:
+        query = (
+            db.query(Booking)
+            .options(joinedload(Booking.package).joinedload(Package.destination))
+            .filter(Booking.user_id == user_id)
+        )
 
-    if status:
-        sql += " AND b.status = :status"
-        params["status"] = status
+        if status:
+            query = query.filter(Booking.status == status)
 
-    sql += " ORDER BY b.created_at DESC"
-
-    rows = execute_query(sql, params)
-    return [format_booking_with_joins(r) for r in rows]
+        query = query.order_by(Booking.created_at.desc())
+        rows = query.all()
+        return [b.to_dict_with_joins() for b in rows]
+    finally:
+        db.close()
 
 
 @tool
@@ -263,21 +284,27 @@ def add_to_favorites(user_id: str, package_id: str) -> dict:
     Returns:
         Result of the operation
     """
-    existing = execute_query_single(FAVORITE_CHECK, {
-        "user_id": user_id,
-        "package_id": package_id
-    })
+    db = create_session()
+    try:
+        existing = (
+            db.query(Favorite)
+            .filter(Favorite.user_id == user_id, Favorite.package_id == package_id)
+            .first()
+        )
 
-    if existing:
-        return {"success": False, "message": "Already in favorites"}
+        if existing:
+            return {"success": False, "message": "Already in favorites"}
 
-    execute_insert(FAVORITE_INSERT, {
-        "id": str(uuid.uuid4()),
-        "user_id": user_id,
-        "package_id": package_id
-    })
+        fav = Favorite(id=str(uuid.uuid4()), user_id=user_id, package_id=package_id)
+        db.add(fav)
+        db.commit()
 
-    return {"success": True, "message": "Added to favorites"}
+        return {"success": True, "message": "Added to favorites"}
+    except Exception as e:
+        db.rollback()
+        return {"success": False, "message": str(e)}
+    finally:
+        db.close()
 
 
 @tool
@@ -290,8 +317,17 @@ def get_user_favorites(user_id: str) -> list:
     Returns:
         List of favorite packages
     """
-    rows = execute_query(FAVORITES_BY_USER, {"user_id": user_id})
-    return [format_favorite_with_joins(r) for r in rows]
+    db = create_session()
+    try:
+        rows = (
+            db.query(Favorite)
+            .options(joinedload(Favorite.package).joinedload(Package.destination))
+            .filter(Favorite.user_id == user_id)
+            .all()
+        )
+        return [f.to_dict_with_joins() for f in rows]
+    finally:
+        db.close()
 
 
 @tool
@@ -305,12 +341,18 @@ def remove_from_favorites(user_id: str, package_id: str) -> dict:
     Returns:
         Result of the operation
     """
-    count = execute_delete(FAVORITE_DELETE, {
-        "user_id": user_id,
-        "package_id": package_id
-    })
+    db = create_session()
+    try:
+        count = (
+            db.query(Favorite)
+            .filter(Favorite.user_id == user_id, Favorite.package_id == package_id)
+            .delete()
+        )
+        db.commit()
 
-    if count > 0:
-        return {"success": True, "message": "Removed from favorites"}
+        if count > 0:
+            return {"success": True, "message": "Removed from favorites"}
 
-    return {"success": False, "message": "Favorite not found"}
+        return {"success": False, "message": "Favorite not found"}
+    finally:
+        db.close()

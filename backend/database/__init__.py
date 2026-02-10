@@ -1,4 +1,14 @@
-"""Database module for VacanceAI - Oracle"""
-from .oracle_client import init_pool, close_pool, execute_query, execute_query_single, execute_insert, execute_update, execute_delete
+"""Database module for VacanceAI - SQLAlchemy ORM"""
+from .session import init_engine, close_engine, get_db, create_session
+from .models import (
+    Base, User, RefreshToken, Destination, Package, Booking,
+    Favorite, Review, Conversation,
+    TripAdvisorLocation, TripAdvisorPhoto, TripAdvisorReview,
+)
 
-__all__ = ["init_pool", "close_pool", "execute_query", "execute_query_single", "execute_insert", "execute_update", "execute_delete"]
+__all__ = [
+    "init_engine", "close_engine", "get_db", "create_session",
+    "Base", "User", "RefreshToken", "Destination", "Package", "Booking",
+    "Favorite", "Review", "Conversation",
+    "TripAdvisorLocation", "TripAdvisorPhoto", "TripAdvisorReview",
+]

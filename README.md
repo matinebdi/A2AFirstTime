@@ -59,7 +59,7 @@ Application complete de reservation de vacances avec assistant IA, integration T
 |--------|--------------|
 | **Frontend** | React 18, TypeScript, Vite, Tailwind CSS |
 | **Backend** | Python 3.12, FastAPI, Uvicorn |
-| **Base de donnees** | Oracle 21c XE |
+| **Base de donnees** | Oracle 21c XE (SQLAlchemy ORM + oracledb) |
 | **IA** | Google Gemini (LangChain + LangGraph) |
 | **Auth** | JWT custom (PyJWT + passlib bcrypt) |
 | **Observabilite** | OpenTelemetry, Jaeger |
@@ -84,7 +84,7 @@ Application complete de reservation de vacances avec assistant IA, integration T
   │   │   FastAPI    │  │  React/nginx │  │   Traces     │  │
   │   │   :8000      │  │   :80        │  │   :16686     │  │
   │   └──────┬───────┘  └──────────────┘  └──────────────┘  │
-  │          │ oracledb (thin)                               │
+  │          │ SQLAlchemy ORM + oracledb (thin)               │
   │          │ log_apps/ (hostPath volume -> repo local)     │
   └──────────┼───────────────────────────────────────────────┘
              │ host.docker.internal:1521
@@ -128,9 +128,10 @@ ui-automation-a2a/
 │   │   ├── jwt_service.py          # Service JWT (PyJWT + bcrypt)
 │   │   └── middleware.py           # Middleware auth
 │   ├── database/
-│   │   ├── oracle_client.py        # Client Oracle (oracledb thin)
-│   │   ├── oracle_schema.sql       # Schema complet (11 tables)
-│   │   └── queries.py              # Requetes SQL centralisees
+│   │   ├── models.py               # Modeles SQLAlchemy ORM (11 modeles)
+│   │   ├── session.py              # Engine + SessionLocal + get_db
+│   │   ├── types.py                # Types custom (JSONEncodedCLOB, OracleBoolean)
+│   │   └── oracle_schema.sql       # Schema complet (11 tables)
 │   ├── logging_config.py           # Logging centralise (RotatingFileHandler -> log_apps/)
 │   ├── log_apps/                   # Fichiers logs (montes via volume K8s hostPath)
 │   │   ├── app.log                 # Logs generaux (INFO+)
@@ -422,8 +423,9 @@ kubectl delete -f k8s/
 
 - **User** : `VACANCEAI` / `vacanceai`
 - **Schema** : `backend/database/oracle_schema.sql` (11 tables + triggers)
-- **Client** : `oracledb` en mode thin (pas d'Oracle Instant Client requis)
-- **Connection pool** : gere via `backend/database/oracle_client.py`
+- **ORM** : SQLAlchemy 2.0+ avec `oracledb` en mode thin (pas d'Oracle Instant Client requis)
+- **Modeles** : `backend/database/models.py` (11 modeles avec relationships et methodes `to_dict()`)
+- **Session** : `backend/database/session.py` (engine, `get_db` dependency, `create_session` pour WebSocket/agents)
 
 ### Conventions Oracle
 
@@ -434,7 +436,8 @@ kubectl delete -f k8s/
 | `JSONB` | `CLOB` avec contrainte `IS JSON` |
 | `TEXT[]` | `CLOB` (JSON array) |
 | `SERIAL` | Triggers + sequences |
-| `LIMIT/OFFSET` | `OFFSET :n ROWS FETCH NEXT :m ROWS ONLY` |
+| `LIMIT/OFFSET` | SQLAlchemy `.offset()` / `.limit()` |
+| Raw SQL | SQLAlchemy ORM (`db.query(Model).filter(...)`) |
 
 ### Tables
 

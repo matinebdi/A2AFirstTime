@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, Star, Filter } from 'lucide-react';
-import { tripadvisorApi } from '../services/tripadvisor';
+import { tripadvisorApi } from '../services/api';
 import { useSetPageContext } from '../contexts/PageContext';
 import type { TripAdvisorLocation, TripAdvisorPhoto, TripAdvisorReview } from '../types';
 

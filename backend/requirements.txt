@@ -6,6 +6,7 @@ uvicorn[standard]>=0.32.0
 
 # Oracle Database
 oracledb>=2.0.0
+sqlalchemy>=2.0.0
 
 # JWT Authentication
 PyJWT>=2.8.0

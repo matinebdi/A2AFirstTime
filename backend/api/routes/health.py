@@ -1,8 +1,12 @@
 """Health check routes"""
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 from datetime import datetime
+from sqlalchemy import text
+from sqlalchemy.orm import Session
+
+from database.session import get_db
 
 router = APIRouter()
 
@@ -18,12 +22,10 @@ async def health_check():
 
 
 @router.get("/ready")
-async def readiness_check():
+async def readiness_check(db: Session = Depends(get_db)):
     """Readiness check endpoint"""
-    from database.oracle_client import execute_scalar
-
     try:
-        result = execute_scalar("SELECT 1 FROM DUAL")
+        result = db.execute(text("SELECT 1 FROM DUAL")).scalar()
         db_status = "connected" if result == 1 else "error"
     except Exception as e:
         db_status = f"error: {str(e)}"

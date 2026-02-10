@@ -3,8 +3,11 @@
 from fastapi import Request, HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Optional
+from sqlalchemy.orm import Session
+
 from auth.jwt_service import decode_token
-from database.oracle_client import execute_query_single
+from database.session import get_db
+from database.models import User as UserModel
 
 security = HTTPBearer()
 
@@ -12,18 +15,19 @@ security = HTTPBearer()
 class User:
     """User model from Oracle database"""
 
-    def __init__(self, data: dict):
-        self.id = data.get("id")
-        self.email = data.get("email")
-        self.first_name = data.get("first_name")
-        self.last_name = data.get("last_name")
-        self.phone = data.get("phone")
-        self.avatar_url = data.get("avatar_url")
-        self.created_at = data.get("created_at")
+    def __init__(self, model: UserModel):
+        self.id = model.id
+        self.email = model.email
+        self.first_name = model.first_name
+        self.last_name = model.last_name
+        self.phone = model.phone
+        self.avatar_url = model.avatar_url
+        self.created_at = model.created_at
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security)
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
 ) -> User:
     """Verify JWT token and return current user"""
     token = credentials.credentials
@@ -38,10 +42,7 @@ async def get_current_user(
         if not user_id:
             raise HTTPException(status_code=401, detail="Invalid token")
 
-        user_row = execute_query_single(
-            "SELECT * FROM users WHERE id = :id",
-            {"id": user_id}
-        )
+        user_row = db.query(UserModel).filter(UserModel.id == user_id).first()
 
         if not user_row:
             raise HTTPException(status_code=401, detail="User not found")
@@ -57,7 +58,10 @@ async def get_current_user(
         )
 
 
-async def get_optional_user(request: Request) -> Optional[User]:
+async def get_optional_user(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> Optional[User]:
     """Return user if authenticated, None otherwise"""
     auth_header = request.headers.get("Authorization")
 
@@ -75,10 +79,7 @@ async def get_optional_user(request: Request) -> Optional[User]:
         if not user_id:
             return None
 
-        user_row = execute_query_single(
-            "SELECT * FROM users WHERE id = :id",
-            {"id": user_id}
-        )
+        user_row = db.query(UserModel).filter(UserModel.id == user_id).first()
 
         if user_row:
             return User(user_row)

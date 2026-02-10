@@ -1,13 +1,11 @@
-"""Destinations routes - Oracle"""
+"""Destinations routes - SQLAlchemy ORM"""
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from typing import Optional
+from sqlalchemy.orm import Session
 
-from database.oracle_client import execute_query, execute_query_single
-from database.queries import (
-    DESTINATIONS_LIST, DESTINATIONS_BY_COUNTRY, DESTINATION_BY_ID,
-    DESTINATION_PACKAGES, format_destination, format_package
-)
+from database.session import get_db
+from database.models import Destination, Package
 
 router = APIRouter()
 
@@ -16,22 +14,19 @@ router = APIRouter()
 async def list_destinations(
     country: Optional[str] = None,
     tags: Optional[str] = Query(None, description="Comma-separated tags"),
-    limit: int = Query(20, ge=1, le=100)
+    limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db),
 ):
     """List all destinations with optional filters"""
-    if country:
-        rows = execute_query(DESTINATIONS_BY_COUNTRY, {
-            "country": country,
-            "offset": 0,
-            "limit": limit
-        })
-    else:
-        rows = execute_query(DESTINATIONS_LIST, {
-            "offset": 0,
-            "limit": limit
-        })
+    query = db.query(Destination)
 
-    destinations = [format_destination(r) for r in rows]
+    if country:
+        query = query.filter(Destination.country == country)
+
+    query = query.order_by(Destination.average_rating.desc().nulls_last())
+
+    rows = query.offset(0).limit(limit).all()
+    destinations = [d.to_dict() for d in rows]
 
     # Filter by tags in Python (JSON array in CLOB)
     if tags:
@@ -47,45 +42,48 @@ async def list_destinations(
 
 
 @router.get("/{destination_id}")
-async def get_destination(destination_id: str):
+async def get_destination(destination_id: str, db: Session = Depends(get_db)):
     """Get destination details with its packages"""
-    dest = execute_query_single(DESTINATION_BY_ID, {"id": destination_id})
+    dest = db.query(Destination).filter(Destination.id == destination_id).first()
 
     if not dest:
         raise HTTPException(status_code=404, detail="Destination not found")
 
-    dest = format_destination(dest)
+    d = dest.to_dict()
 
     # Get packages for this destination
-    pkg_rows = execute_query(DESTINATION_PACKAGES, {"destination_id": destination_id})
-    dest["packages"] = [format_package(p) for p in pkg_rows]
+    pkgs = (
+        db.query(Package)
+        .filter(Package.destination_id == destination_id, Package.is_active == True)
+        .order_by(Package.price_per_person)
+        .all()
+    )
+    d["packages"] = [p.to_dict() for p in pkgs]
 
-    return dest
+    return d
 
 
 @router.get("/{destination_id}/packages")
 async def get_destination_packages(
     destination_id: str,
     min_price: Optional[float] = None,
-    max_price: Optional[float] = None
+    max_price: Optional[float] = None,
+    db: Session = Depends(get_db),
 ):
     """Get packages for a specific destination"""
-    sql = """
-        SELECT * FROM packages
-        WHERE destination_id = :destination_id AND is_active = 1
-    """
-    params = {"destination_id": destination_id}
+    query = (
+        db.query(Package)
+        .filter(Package.destination_id == destination_id, Package.is_active == True)
+    )
 
     if min_price is not None:
-        sql += " AND price_per_person >= :min_price"
-        params["min_price"] = min_price
+        query = query.filter(Package.price_per_person >= min_price)
     if max_price is not None:
-        sql += " AND price_per_person <= :max_price"
-        params["max_price"] = max_price
+        query = query.filter(Package.price_per_person <= max_price)
 
-    sql += " ORDER BY price_per_person"
+    query = query.order_by(Package.price_per_person)
 
-    rows = execute_query(sql, params)
-    packages = [format_package(r) for r in rows]
+    rows = query.all()
+    packages = [p.to_dict() for p in rows]
 
     return {"packages": packages, "count": len(packages)}

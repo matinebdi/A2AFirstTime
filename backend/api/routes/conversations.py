@@ -1,17 +1,15 @@
 """Conversation routes - WebSocket chat with UI Agent (Oracle)"""
 
+import json
+import uuid
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, Depends
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 from datetime import datetime
-import json
-import uuid
+from sqlalchemy.orm import Session
 
-from database.oracle_client import execute_query_single, execute_insert, execute_update
-from database.queries import (
-    CONVERSATION_BY_ID, CONVERSATION_INSERT, CONVERSATION_UPDATE_MESSAGES,
-    CONVERSATION_CLEAR, format_conversation, to_json_string
-)
+from database.session import get_db, create_session
+from database.models import Conversation
 from agents.orchestrator.agent import process_request
 from auth.middleware import get_current_user, get_optional_user
 
@@ -33,19 +31,31 @@ class ConversationResponse(BaseModel):
 active_connections: Dict[str, WebSocket] = {}
 
 
+def _to_json(value):
+    """Convert a Python object to a JSON string for CLOB storage."""
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return value
+    return json.dumps(value, ensure_ascii=False)
+
+
 @router.websocket("/ws/{conversation_id}")
 async def websocket_chat(websocket: WebSocket, conversation_id: str):
     """WebSocket endpoint for real-time chat with the vacation assistant."""
     await websocket.accept()
     active_connections[conversation_id] = websocket
 
-    # Get or create conversation
-    conv_row = execute_query_single(CONVERSATION_BY_ID, {"id": conversation_id})
-
-    history = []
-    if conv_row:
-        conv = format_conversation(conv_row)
-        history = conv.get("messages", [])
+    # Get or create conversation (manual session for WebSocket)
+    db = create_session()
+    try:
+        conv = db.query(Conversation).filter(Conversation.id == conversation_id).first()
+        history = []
+        if conv:
+            history = conv.messages or []
+        conv_exists = conv is not None
+    finally:
+        db.close()
 
     try:
         while True:
@@ -86,21 +96,27 @@ async def websocket_chat(websocket: WebSocket, conversation_id: str):
                 "ui_actions": result.get("ui_actions", [])
             })
 
-            # Save conversation
-            messages_json = to_json_string(history)
-            if conv_row:
-                execute_update(CONVERSATION_UPDATE_MESSAGES, {
-                    "messages": messages_json,
-                    "id": conversation_id
-                })
-            else:
-                execute_insert(CONVERSATION_INSERT, {
-                    "id": conversation_id,
-                    "user_id": None,
-                    "messages": messages_json,
-                    "context": "{}"
-                })
-                conv_row = True  # Mark as existing for subsequent messages
+            # Save conversation (new session per message)
+            db = create_session()
+            try:
+                messages_json = _to_json(history)
+                if conv_exists:
+                    conv = db.query(Conversation).filter(Conversation.id == conversation_id).first()
+                    if conv:
+                        conv.messages = messages_json
+                        db.commit()
+                else:
+                    new_conv = Conversation(
+                        id=conversation_id,
+                        user_id=None,
+                        messages=messages_json,
+                        context="{}",
+                    )
+                    db.add(new_conv)
+                    db.commit()
+                    conv_exists = True
+            finally:
+                db.close()
 
             await websocket.send_text(json.dumps({
                 "response": result["response"],
@@ -129,15 +145,15 @@ async def websocket_chat(websocket: WebSocket, conversation_id: str):
 @router.post("/{conversation_id}/message")
 async def send_message(
     conversation_id: str,
-    chat: ChatMessage
+    chat: ChatMessage,
+    db: Session = Depends(get_db),
 ) -> ConversationResponse:
     """Send a message to the vacation assistant (REST alternative to WebSocket)."""
-    conv_row = execute_query_single(CONVERSATION_BY_ID, {"id": conversation_id})
+    conv = db.query(Conversation).filter(Conversation.id == conversation_id).first()
 
     history = []
-    if conv_row:
-        conv = format_conversation(conv_row)
-        history = conv.get("messages", [])
+    if conv:
+        history = conv.messages or []
 
     history.append({
         "role": "user",
@@ -161,19 +177,18 @@ async def send_message(
         "ui_actions": result.get("ui_actions", [])
     })
 
-    messages_json = to_json_string(history)
-    if conv_row:
-        execute_update(CONVERSATION_UPDATE_MESSAGES, {
-            "messages": messages_json,
-            "id": conversation_id
-        })
+    messages_json = _to_json(history)
+    if conv:
+        conv.messages = messages_json
     else:
-        execute_insert(CONVERSATION_INSERT, {
-            "id": conversation_id,
-            "user_id": None,
-            "messages": messages_json,
-            "context": "{}"
-        })
+        new_conv = Conversation(
+            id=conversation_id,
+            user_id=None,
+            messages=messages_json,
+            context="{}",
+        )
+        db.add(new_conv)
+    db.commit()
 
     return ConversationResponse(
         response=result["response"],
@@ -183,33 +198,41 @@ async def send_message(
 
 
 @router.get("/{conversation_id}")
-async def get_conversation(conversation_id: str):
+async def get_conversation(conversation_id: str, db: Session = Depends(get_db)):
     """Get conversation history."""
-    row = execute_query_single(CONVERSATION_BY_ID, {"id": conversation_id})
+    conv = db.query(Conversation).filter(Conversation.id == conversation_id).first()
 
-    if not row:
+    if not conv:
         return {"messages": [], "conversation_id": conversation_id}
 
-    return format_conversation(row)
+    return conv.to_dict()
 
 
 @router.delete("/{conversation_id}")
-async def clear_conversation(conversation_id: str):
+async def clear_conversation(conversation_id: str, db: Session = Depends(get_db)):
     """Clear conversation history."""
-    execute_update(CONVERSATION_CLEAR, {"id": conversation_id})
+    conv = db.query(Conversation).filter(Conversation.id == conversation_id).first()
+    if conv:
+        conv.messages = "[]"
+        db.commit()
     return {"message": "Conversation cleared"}
 
 
 @router.post("/new")
-async def create_conversation(user=Depends(get_optional_user)):
+async def create_conversation(
+    user=Depends(get_optional_user),
+    db: Session = Depends(get_db),
+):
     """Create a new conversation."""
     conversation_id = str(uuid.uuid4())
 
-    execute_insert(CONVERSATION_INSERT, {
-        "id": conversation_id,
-        "user_id": user.id if user else None,
-        "messages": "[]",
-        "context": "{}"
-    })
+    conv = Conversation(
+        id=conversation_id,
+        user_id=user.id if user else None,
+        messages="[]",
+        context="{}",
+    )
+    db.add(conv)
+    db.commit()
 
     return {"conversation_id": conversation_id}
