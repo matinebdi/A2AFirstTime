@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, HTTPException, Depends
 from typing import Optional
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from database.session import get_db
 from database.models import TripAdvisorLocation, TripAdvisorPhoto, TripAdvisorReview
@@ -21,6 +21,26 @@ async def list_locations(
         query = query.filter(TripAdvisorLocation.search_country == country)
     rows = query.order_by(TripAdvisorLocation.name).all()
     locations = [r.to_dict() for r in rows]
+    return {"locations": locations}
+
+
+@router.get("/locations-with-details")
+async def list_locations_with_details(
+    country: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    """List TripAdvisor locations with photos and reviews in a single query"""
+    query = (
+        db.query(TripAdvisorLocation)
+        .options(
+            joinedload(TripAdvisorLocation.photos),
+            joinedload(TripAdvisorLocation.reviews),
+        )
+    )
+    if country:
+        query = query.filter(TripAdvisorLocation.search_country == country)
+    rows = query.order_by(TripAdvisorLocation.name).all()
+    locations = [r.to_dict_with_details() for r in rows]
     return {"locations": locations}
 
 

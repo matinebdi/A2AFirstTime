@@ -8,6 +8,7 @@ import { Calendar, MapPin, Users, CreditCard, Loader2 } from 'lucide-react';
 import { bookingsApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useSetPageContext } from '../contexts/PageContext';
+import { PageTransition, FadeIn, AnimatedLinkButton } from '../components/animations';
 import type { Booking } from '../types';
 
 const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
@@ -226,56 +227,64 @@ export const Bookings: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Mes Reservations</h1>
-            <p className="text-gray-600 mt-2">
-              Gerez vos voyages et suivez vos paiements
-            </p>
-          </div>
-          <Link
-            to="/search"
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
-          >
-            Nouvelle reservation
-          </Link>
-        </div>
-
-        {bookings.length === 0 ? (
-          <div className="bg-white rounded-lg shadow p-16 text-center">
-            <Calendar className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-gray-700 mb-2">
-              Aucune reservation
-            </h2>
-            <p className="text-gray-500 mb-4">
-              Vous n'avez pas encore de reservation
-            </p>
-            <Link
-              to="/search"
-              className="text-blue-600 hover:underline font-medium"
-            >
-              Rechercher un package
-            </Link>
-          </div>
-        ) : (
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <div className="ag-theme-alpine" style={{ height: 500, width: '100%' }}>
-              <AgGridReact
-                rowData={bookings}
-                columnDefs={columnDefs}
-                defaultColDef={defaultColDef}
-                pagination={true}
-                paginationPageSize={10}
-                rowHeight={60}
-                animateRows={true}
-              />
+    <PageTransition>
+      <div className="min-h-screen py-8">
+        <div className="max-w-7xl mx-auto px-4">
+          <FadeIn>
+            <div className="flex justify-between items-center mb-8">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Mes Reservations</h1>
+                <p className="text-gray-600 mt-2">
+                  Gerez vos voyages et suivez vos paiements
+                </p>
+              </div>
+              <AnimatedLinkButton
+                to="/search"
+                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
+              >
+                Nouvelle reservation
+              </AnimatedLinkButton>
             </div>
-          </div>
-        )}
+          </FadeIn>
+
+          {bookings.length === 0 ? (
+            <FadeIn delay={0.2}>
+              <div className="bg-white/90 backdrop-blur-sm rounded-lg shadow p-16 text-center">
+                <Calendar className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                <h2 className="text-xl font-semibold text-gray-700 mb-2">
+                  Aucune reservation
+                </h2>
+                <p className="text-gray-500 mb-4">
+                  Vous n'avez pas encore de reservation
+                </p>
+                <Link
+                  to="/search"
+                  className="text-blue-600 hover:underline font-medium"
+                >
+                  Rechercher un package
+                </Link>
+              </div>
+            </FadeIn>
+          ) : (
+            <FadeIn delay={0.2}>
+              <div className="bg-white/90 backdrop-blur-sm rounded-lg shadow overflow-hidden">
+                <div className="ag-theme-alpine" style={{ height: 500, width: '100%' }}>
+                  <AgGridReact
+                    rowData={bookings}
+                    columnDefs={columnDefs}
+                    defaultColDef={defaultColDef}
+                    pagination={true}
+                    paginationPageSize={10}
+                    rowHeight={60}
+                    animateRows={true}
+                  />
+                </div>
+              </div>
+            </FadeIn>
+          )}
+        </div>
       </div>
-    </div>
+    </PageTransition>
   );
 };
 

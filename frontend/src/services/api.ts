@@ -128,10 +128,14 @@ export const destinationsApi = {
 export const packagesApi = {
   list: async (params?: {
     destination?: string;
+    destination_id?: string;
     min_price?: number;
     max_price?: number;
     min_duration?: number;
     max_duration?: number;
+    tags?: string;
+    start_date?: string;
+    sort_by?: string;
     limit?: number;
     offset?: number;
   }) => {
@@ -251,6 +255,17 @@ export const tripadvisorApi = {
     return data.locations;
   },
 
+  getLocationsWithDetails: async (country?: string) => {
+    const { data } = await api.get('/api/tripadvisor/locations-with-details', {
+      params: country ? { country } : {},
+    });
+    return data.locations as (TripAdvisorLocation & {
+      photos: TripAdvisorPhoto[];
+      reviews: TripAdvisorReview[];
+      average_rating: number;
+    })[];
+  },
+
   getLocation: async (locationId: string): Promise<TripAdvisorLocation | null> => {
     const { data } = await api.get(`/api/tripadvisor/locations/${locationId}`);
     return data;
@@ -281,7 +296,7 @@ export const tripadvisorApi = {
   },
 
   getPhotoUrl: (photo: TripAdvisorPhoto): string => {
-    return photo.url_medium || photo.url_large || photo.url_original;
+    return photo.url_large || photo.url_original || photo.url_medium;
   },
 };
 

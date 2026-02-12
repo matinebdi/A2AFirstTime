@@ -6,7 +6,7 @@ from datetime import date
 from sqlalchemy.orm import Session, joinedload
 
 from database.session import get_db
-from database.models import Package, Review
+from database.models import Package, Review, Destination
 
 router = APIRouter()
 
@@ -14,12 +14,14 @@ router = APIRouter()
 @router.get("/")
 async def list_packages(
     destination: Optional[str] = None,
+    destination_id: Optional[str] = None,
     min_price: Optional[float] = None,
     max_price: Optional[float] = None,
     min_duration: Optional[int] = None,
     max_duration: Optional[int] = None,
     tags: Optional[str] = Query(None, description="Comma-separated tags"),
     start_date: Optional[date] = None,
+    sort_by: Optional[str] = Query(None, description="Sort: price_asc, price_desc, duration_asc, duration_desc, name_asc"),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
@@ -31,6 +33,9 @@ async def list_packages(
         .filter(Package.is_active == True)
     )
 
+    # SQL-level filters
+    if destination_id:
+        query = query.filter(Package.destination_id == destination_id)
     if min_price is not None:
         query = query.filter(Package.price_per_person >= min_price)
     if max_price is not None:
@@ -43,27 +48,48 @@ async def list_packages(
         query = query.filter(Package.available_from <= start_date)
         query = query.filter(Package.available_to >= start_date)
 
-    # Count total before pagination
-    total = query.count()
+    # Sorting
+    sort_map = {
+        "price_asc": Package.price_per_person.asc(),
+        "price_desc": Package.price_per_person.desc(),
+        "duration_asc": Package.duration_days.asc(),
+        "duration_desc": Package.duration_days.desc(),
+        "name_asc": Package.name.asc(),
+    }
+    order = sort_map.get(sort_by, Package.price_per_person.asc())
+    query = query.order_by(order)
 
-    # Add ordering and pagination
-    rows = (
-        query.order_by(Package.price_per_person)
-        .offset(offset)
-        .limit(limit)
-        .all()
-    )
+    # Fetch all matching rows (needed for Python-level filters)
+    rows = query.all()
 
-    packages = [p.to_dict_with_destination() for p in rows]
-
-    # Filter by destination name in Python (from joined data)
-    if destination:
+    # Python-level filter: destination text search (fallback when no destination_id)
+    if destination and not destination_id:
         dest_lower = destination.lower()
-        packages = [
-            p for p in packages
-            if dest_lower in (p.get("destinations", {}).get("name", "") or "").lower()
-            or dest_lower in (p.get("destinations", {}).get("city", "") or "").lower()
+        rows = [
+            p for p in rows
+            if p.destination and (
+                dest_lower in (p.destination.name or "").lower()
+                or dest_lower in (p.destination.city or "").lower()
+                or dest_lower in (p.destination.country or "").lower()
+            )
         ]
+
+    # Python-level filter: tags (match on destination tags)
+    if tags:
+        tag_list = [t.strip().lower() for t in tags.split(",") if t.strip()]
+        rows = [
+            p for p in rows
+            if p.destination and p.destination.tags and any(
+                t in [x.lower() for x in p.destination.tags] for t in tag_list
+            )
+        ]
+
+    # Total after all filters
+    total = len(rows)
+
+    # Pagination (applied after Python filters)
+    paginated = rows[offset:offset + limit]
+    packages = [p.to_dict_with_destination() for p in paginated]
 
     return {
         "packages": packages,

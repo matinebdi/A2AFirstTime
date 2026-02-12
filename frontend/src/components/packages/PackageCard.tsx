@@ -1,19 +1,30 @@
 import { Heart, MapPin, Calendar, Users, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import Tilt from 'react-parallax-tilt';
 import type { Package } from '../../types';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { favoritesApi } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface PackageCardProps {
   pkg: Package;
+  initialFavorite?: boolean;
   onFavoriteToggle?: (packageId: string, isFavorite: boolean) => void;
 }
 
-export const PackageCard: React.FC<PackageCardProps> = ({ pkg, onFavoriteToggle }) => {
-  const [isFavorite, setIsFavorite] = useState(false);
+export const PackageCard: React.FC<PackageCardProps> = ({ pkg, initialFavorite, onFavoriteToggle }) => {
+  const [isFavorite, setIsFavorite] = useState(initialFavorite ?? false);
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
+
+  useEffect(() => {
+    if (initialFavorite !== undefined || !user) return;
+    let cancelled = false;
+    favoritesApi.check(pkg.id).then((res) => {
+      if (!cancelled) setIsFavorite(res.is_favorite);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [pkg.id, user, initialFavorite]);
 
   const handleFavorite = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -44,8 +55,20 @@ export const PackageCard: React.FC<PackageCardProps> = ({ pkg, onFavoriteToggle 
   const imageUrl = pkg.images?.[0] || destination?.image_url || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e';
 
   return (
+    <Tilt
+      tiltMaxAngleX={8}
+      tiltMaxAngleY={8}
+      glareEnable={true}
+      glareMaxOpacity={0.15}
+      glareColor="#ffffff"
+      glarePosition="all"
+      glareBorderRadius="12px"
+      scale={1.02}
+      transitionSpeed={400}
+      className="rounded-xl"
+    >
     <Link to={`/packages/${pkg.id}`} className="block">
-      <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+      <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow">
         {/* Image */}
         <div className="relative h-48">
           <img
@@ -115,6 +138,7 @@ export const PackageCard: React.FC<PackageCardProps> = ({ pkg, onFavoriteToggle 
         </div>
       </div>
     </Link>
+    </Tilt>
   );
 };
 

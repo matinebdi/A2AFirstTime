@@ -81,3 +81,97 @@ html {
 .animate-pulse-slow {
   animation: pulse 2s ease-in-out infinite;
 }
+
+/* Dual Range Slider */
+.dual-range-slider {
+  position: relative;
+  height: 24px;
+}
+
+.dual-range-slider .slider-track {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 100%;
+  height: 4px;
+  background: #e5e7eb;
+  border-radius: 2px;
+}
+
+.dual-range-slider .slider-range {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 4px;
+  background: #3b82f6;
+  border-radius: 2px;
+}
+
+.dual-range-slider .slider-thumb {
+  position: absolute;
+  top: 0;
+  width: 100%;
+  height: 0;
+  pointer-events: none;
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+  background: transparent;
+}
+
+.dual-range-slider .slider-thumb--left {
+  z-index: 3;
+}
+
+.dual-range-slider .slider-thumb--right {
+  z-index: 4;
+}
+
+/* WebKit thumb */
+.dual-range-slider .slider-thumb::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  pointer-events: all;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #3b82f6;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  margin-top: 10px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.dual-range-slider .slider-thumb::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
+}
+
+.dual-range-slider .slider-thumb::-webkit-slider-thumb:active {
+  transform: scale(1.2);
+  background: #eff6ff;
+}
+
+/* Firefox thumb */
+.dual-range-slider .slider-thumb::-moz-range-thumb {
+  pointer-events: all;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #3b82f6;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.dual-range-slider .slider-thumb::-moz-range-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
+}
+
+.dual-range-slider .slider-thumb::-moz-range-track {
+  background: transparent;
+  border: none;
+}

@@ -1,14 +1,22 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, Star, Filter } from 'lucide-react';
+import Tilt from 'react-parallax-tilt';
 import { tripadvisorApi } from '../services/api';
 import { useSetPageContext } from '../contexts/PageContext';
-import type { TripAdvisorLocation, TripAdvisorPhoto, TripAdvisorReview } from '../types';
+import { PageTransition, FadeIn, StaggerContainer, StaggerItem } from '../components/animations';
+import type { TripAdvisorPhoto, TripAdvisorReview } from '../types';
 
-interface HotelWithDetails extends TripAdvisorLocation {
+interface HotelWithDetails {
+  [key: string]: unknown;
+  id: string;
+  location_id: string;
+  name: string;
+  address_obj?: { address_string?: string };
+  search_country: string;
   photos: TripAdvisorPhoto[];
   reviews: TripAdvisorReview[];
-  averageRating: number;
+  average_rating: number;
 }
 
 export const Hotels: React.FC = () => {
@@ -34,30 +42,8 @@ export const Hotels: React.FC = () => {
     const fetchHotels = async () => {
       setLoading(true);
       try {
-        const locations = await tripadvisorApi.getLocations(selectedCountry || undefined);
-
-        // Fetch photos and reviews for each hotel
-        const hotelsWithDetails = await Promise.all(
-          locations.map(async (location) => {
-            const [photos, reviews] = await Promise.all([
-              tripadvisorApi.getPhotos(location.location_id),
-              tripadvisorApi.getReviews(location.location_id),
-            ]);
-
-            const averageRating = reviews.length > 0
-              ? reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length
-              : 0;
-
-            return {
-              ...location,
-              photos,
-              reviews,
-              averageRating,
-            };
-          })
-        );
-
-        setHotels(hotelsWithDetails);
+        const data = await tripadvisorApi.getLocationsWithDetails(selectedCountry || undefined);
+        setHotels(data as unknown as HotelWithDetails[]);
       } catch (error) {
         console.error('Error fetching hotels:', error);
       } finally {
@@ -78,7 +64,7 @@ export const Hotels: React.FC = () => {
           location_id: h.location_id,
           name: h.name,
           country: h.search_country,
-          rating: h.averageRating,
+          rating: h.average_rating,
         })),
       },
     });
@@ -105,111 +91,133 @@ export const Hotels: React.FC = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          Hotels TripAdvisor
-        </h1>
-        <p className="text-gray-600">
-          {hotels.length} hotels disponibles
-        </p>
-      </div>
+    <PageTransition>
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Header */}
+        <FadeIn>
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Hotels TripAdvisor
+            </h1>
+            <p className="text-gray-600">
+              {hotels.length} hotels disponibles
+            </p>
+          </div>
+        </FadeIn>
 
-      {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-4 mb-8">
-        <div className="flex items-center gap-4">
-          <Filter className="h-5 w-5 text-gray-500" />
-          <select
-            value={selectedCountry}
-            onChange={(e) => setSelectedCountry(e.target.value)}
-            className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">Tous les pays</option>
-            {countries.map((country) => (
-              <option key={country} value={country}>
-                {country}
-              </option>
+        {/* Filters */}
+        <FadeIn delay={0.1}>
+          <div className="bg-white/90 backdrop-blur-sm rounded-lg shadow p-4 mb-8">
+            <div className="flex items-center gap-4">
+              <Filter className="h-5 w-5 text-gray-500" />
+              <select
+                value={selectedCountry}
+                onChange={(e) => setSelectedCountry(e.target.value)}
+                className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Tous les pays</option>
+                {countries.map((country) => (
+                  <option key={country} value={country}>
+                    {country}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </FadeIn>
+
+        {/* Hotels Grid */}
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div
+                key={i}
+                className="bg-gray-200 rounded-xl h-80 animate-pulse"
+              />
             ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Hotels List */}
-      {loading ? (
-        <div className="grid grid-cols-1 gap-6">
-          {[1, 2, 3, 4].map((i) => (
-            <div
-              key={i}
-              className="bg-gray-200 rounded-xl h-48 animate-pulse"
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {hotels.map((hotel) => (
-            <Link
-              key={hotel.id}
-              to={`/hotels/${hotel.location_id}`}
-              className="block bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
-            >
-              <div className="flex flex-col md:flex-row">
-                {/* Image */}
-                <div className="md:w-72 h-48 md:h-auto bg-gray-200 flex-shrink-0">
-                  {hotel.photos.length > 0 ? (
-                    <img
-                      src={tripadvisorApi.getPhotoUrl(hotel.photos[0])}
-                      alt={hotel.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-400">
-                      No image
+          </div>
+        ) : (
+          <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {hotels.map((hotel) => (
+              <StaggerItem key={hotel.id} className="h-full">
+                <Tilt
+                  tiltMaxAngleX={8}
+                  tiltMaxAngleY={8}
+                  glareEnable={true}
+                  glareMaxOpacity={0.15}
+                  glareColor="#ffffff"
+                  glarePosition="all"
+                  glareBorderRadius="12px"
+                  scale={1.02}
+                  transitionSpeed={400}
+                  className="rounded-xl h-full"
+                >
+                <Link
+                  to={`/hotels/${hotel.location_id}`}
+                  className="block h-full"
+                >
+                  <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow h-full flex flex-col">
+                    {/* Image */}
+                    <div className="relative h-48 flex-shrink-0">
+                      {hotel.photos.length > 0 ? (
+                        <img
+                          src={tripadvisorApi.getPhotoUrl(hotel.photos[0])}
+                          alt={hotel.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400">
+                          No image
+                        </div>
+                      )}
+                      <span className="absolute top-3 right-3 bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
+                        {hotel.search_country}
+                      </span>
+                      {hotel.average_rating > 0 && (
+                        <div className="absolute bottom-3 left-3 bg-white/90 px-2 py-1 rounded-full flex items-center text-sm">
+                          <Star className="h-4 w-4 text-yellow-500 fill-current mr-1" />
+                          {hotel.average_rating.toFixed(1)}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
 
-                {/* Info */}
-                <div className="flex-grow p-6">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h2 className="text-xl font-bold text-gray-900 mb-2">
-                        {hotel.name}
-                      </h2>
-                      <div className="flex items-center text-gray-600 mb-2">
-                        <MapPin className="h-4 w-4 mr-1" />
-                        <span className="text-sm">
-                          {hotel.address_obj?.address_string || hotel.search_country}
+                    {/* Content */}
+                    <div className="p-4 flex flex-col flex-grow">
+                      <h3 className="font-semibold text-lg text-gray-900 line-clamp-1">{hotel.name}</h3>
+                      <div className="flex items-center text-gray-500 text-sm mt-1 line-clamp-1">
+                        <MapPin className="h-4 w-4 mr-1 flex-shrink-0" />
+                        <span className="truncate">{hotel.address_obj?.address_string || hotel.search_country}</span>
+                      </div>
+
+                      <div className="flex items-center gap-4 mt-3 text-sm text-gray-500">
+                        <span>{hotel.photos.length} photos</span>
+                        <span>{hotel.reviews.length} avis</span>
+                      </div>
+
+                      <div className="mt-auto pt-4 flex items-end justify-between">
+                        {hotel.average_rating > 0 && renderStars(hotel.average_rating)}
+                        <span className="text-blue-600 font-medium hover:underline">
+                          Voir details
                         </span>
                       </div>
-                      {hotel.averageRating > 0 && renderStars(hotel.averageRating)}
                     </div>
-                    <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
-                      {hotel.search_country}
-                    </span>
                   </div>
+                </Link>
+                </Tilt>
+              </StaggerItem>
+            ))}
+          </StaggerContainer>
+        )}
 
-                  <div className="mt-4 flex items-center gap-4 text-sm text-gray-500">
-                    <span>{hotel.photos.length} photos</span>
-                    <span>{hotel.reviews.length} avis</span>
-                  </div>
-
-                  <span className="mt-4 inline-block text-blue-600 font-medium hover:underline">
-                    Voir les details
-                  </span>
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      )}
-
-      {!loading && hotels.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-gray-500">Aucun hotel trouve</p>
-        </div>
-      )}
-    </div>
+        {!loading && hotels.length === 0 && (
+          <FadeIn>
+            <div className="text-center py-12">
+              <p className="text-gray-500">Aucun hotel trouve</p>
+            </div>
+          </FadeIn>
+        )}
+      </div>
+    </PageTransition>
   );
 };
 

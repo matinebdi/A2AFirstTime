@@ -224,7 +224,9 @@ class Package(Base):
             "description": self.description,
             "price_per_person": _f(self.price_per_person),
             "duration_days": self.duration_days,
+            "max_persons": self.max_persons,
             "image_url": self.image_url,
+            "images": self.images,
             "destination_id": self.destination_id,
             "is_active": self.is_active,
             "destinations": self.destination.to_minimal_dict() if self.destination else None,
@@ -414,6 +416,9 @@ class TripAdvisorLocation(Base):
     created_at = Column(TZ_TIMESTAMP, nullable=False, server_default=sa_text("SYSTIMESTAMP"))
     updated_at = Column(TZ_TIMESTAMP, nullable=False, server_default=sa_text("SYSTIMESTAMP"))
 
+    photos = relationship("TripAdvisorPhoto", foreign_keys="TripAdvisorPhoto.location_id", primaryjoin="TripAdvisorLocation.location_id == TripAdvisorPhoto.location_id", lazy="select", viewonly=True)
+    reviews = relationship("TripAdvisorReview", foreign_keys="TripAdvisorReview.location_id", primaryjoin="TripAdvisorLocation.location_id == TripAdvisorReview.location_id", lazy="select", viewonly=True)
+
     def to_dict(self):
         return {
             "id": self.id,
@@ -436,6 +441,17 @@ class TripAdvisorLocation(Base):
             "created_at": self.created_at,
             "updated_at": self.updated_at,
         }
+
+    def to_dict_with_details(self):
+        d = self.to_dict()
+        d["photos"] = [p.to_dict() for p in self.photos]
+        d["reviews"] = [r.to_dict() for r in self.reviews]
+        avg = 0.0
+        if self.reviews:
+            ratings = [r.rating for r in self.reviews if r.rating]
+            avg = sum(ratings) / len(ratings) if ratings else 0.0
+        d["average_rating"] = round(avg, 1)
+        return d
 
 
 # ============================================

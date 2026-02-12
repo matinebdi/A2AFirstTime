@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Tech Stack
 
 - **Backend**: Python 3.12 / FastAPI / Uvicorn
-- **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS
+- **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS + Framer Motion
 - **Database**: Oracle 21c XE (SQLAlchemy ORM + oracledb thin mode)
 - **AI**: Google Gemini 2.0 Flash (LangChain + LangGraph)
 - **Auth**: Custom JWT (PyJWT + passlib bcrypt)
@@ -142,7 +142,15 @@ backend/
 ```
 frontend/src/
 ├── components/
-│   ├── Layout.tsx              # Main layout (Header + Outlet + Footer)
+│   ├── Layout.tsx              # Main layout (Header + AnimatePresence + Outlet + Footer)
+│   ├── animations/
+│   │   ├── index.ts            # Re-exports all animation components
+│   │   ├── FadeIn.tsx          # Scroll reveal wrapper (direction, delay, duration)
+│   │   ├── StaggerContainer.tsx # Staggered list/grid animations
+│   │   ├── PageTransition.tsx  # Page entry animation wrapper
+│   │   ├── HeroCarousel.tsx    # Ken Burns carousel (4 images, crossfade)
+│   │   ├── HeroVideo.tsx       # Video background (unused, available)
+│   │   └── AnimatedButton.tsx  # Button hover/tap effects (scale + glow)
 │   ├── common/
 │   │   ├── Header.tsx
 │   │   └── Footer.tsx
@@ -150,14 +158,16 @@ frontend/src/
 │   │   ├── ChatWidget.tsx      # Floating chat widget (WebSocket)
 │   │   └── ChatErrorBoundary.tsx
 │   └── packages/
-│       └── PackageCard.tsx
+│       └── PackageCard.tsx     # 3D tilt effect (react-parallax-tilt)
 ├── pages/
-│   ├── Home.tsx                # Landing page with featured packages
+│   ├── Home.tsx                # Landing page (hero carousel + featured packages)
 │   ├── Search.tsx              # Package search with filters
+│   ├── Favorites.tsx           # User's favorite packages
 │   ├── PackageDetail.tsx       # Single package view + booking form
-│   ├── Hotels.tsx              # TripAdvisor hotels list
+│   ├── Hotels.tsx              # TripAdvisor hotels list (single API call)
 │   ├── HotelDetail.tsx         # Single hotel with photos + reviews
 │   ├── Bookings.tsx            # User's bookings (AG Grid)
+│   ├── Profile.tsx             # User profile + avatar upload
 │   ├── Login.tsx
 │   └── SignUp.tsx
 ├── contexts/
@@ -289,6 +299,7 @@ frontend/src/
 
 ### TripAdvisor
 - `GET /api/tripadvisor/locations` - Hotels
+- `GET /api/tripadvisor/locations-with-details` - Hotels with photos + reviews + rating (single query)
 - `GET /api/tripadvisor/locations/{id}` - Hotel details + photos + reviews
 
 ### Health

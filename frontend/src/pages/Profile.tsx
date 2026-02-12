@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { User, Mail, Phone, Loader2, CheckCircle, Camera } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSetPageContext } from '../contexts/PageContext';
+import { PageTransition, FadeIn, AnimatedButton } from '../components/animations';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
@@ -105,147 +106,149 @@ export const Profile: React.FC = () => {
   if (!user) return null;
 
   return (
-    <div className="min-h-[calc(100vh-64px)] flex items-center justify-center bg-gray-50 py-12 px-4">
-      <div className="max-w-md w-full">
-        <div className="text-center mb-8">
-          <div className="relative inline-block">
-            <button
-              type="button"
-              onClick={handleAvatarClick}
-              disabled={avatarLoading}
-              className="relative group"
-            >
-              {avatarSrc ? (
-                <img
-                  src={avatarSrc}
-                  alt="Avatar"
-                  className="h-24 w-24 rounded-full object-cover border-4 border-white shadow-lg"
-                />
-              ) : (
-                <div className="h-24 w-24 rounded-full bg-blue-100 flex items-center justify-center border-4 border-white shadow-lg">
-                  <User className="h-10 w-10 text-blue-600" />
-                </div>
-              )}
-              <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
-                {avatarLoading ? (
-                  <Loader2 className="h-6 w-6 text-white animate-spin" />
+    <PageTransition>
+      <div className="min-h-[calc(100vh-64px)] flex items-center justify-center py-12 px-4">
+        <FadeIn className="max-w-md w-full">
+          <div className="text-center mb-8">
+            <div className="relative inline-block">
+              <button
+                type="button"
+                onClick={handleAvatarClick}
+                disabled={avatarLoading}
+                className="relative group"
+              >
+                {avatarSrc ? (
+                  <img
+                    src={avatarSrc}
+                    alt="Avatar"
+                    className="h-24 w-24 rounded-full object-cover border-4 border-white shadow-lg"
+                  />
                 ) : (
-                  <Camera className="h-6 w-6 text-white" />
+                  <div className="h-24 w-24 rounded-full bg-blue-100 flex items-center justify-center border-4 border-white shadow-lg">
+                    <User className="h-10 w-10 text-blue-600" />
+                  </div>
                 )}
-              </div>
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={handleFileChange}
-              className="hidden"
-            />
+                <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                  {avatarLoading ? (
+                    <Loader2 className="h-6 w-6 text-white animate-spin" />
+                  ) : (
+                    <Camera className="h-6 w-6 text-white" />
+                  )}
+                </div>
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+            </div>
+            <h2 className="mt-4 text-3xl font-bold text-gray-900">Mon Profil</h2>
+            <p className="mt-2 text-gray-600">
+              Gerez vos informations personnelles
+            </p>
           </div>
-          <h2 className="mt-4 text-3xl font-bold text-gray-900">Mon Profil</h2>
-          <p className="mt-2 text-gray-600">
-            Gerez vos informations personnelles
-          </p>
-        </div>
 
-        <div className="bg-white rounded-xl shadow-lg p-8">
-          {error && (
-            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
-              {error}
-            </div>
-          )}
-
-          {success && (
-            <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-600 text-sm flex items-center">
-              <CheckCircle className="h-4 w-4 mr-2 flex-shrink-0" />
-              {success}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <input
-                  type="email"
-                  value={user.email}
-                  disabled
-                  className="w-full pl-10 pr-4 py-3 border rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
-                />
+          <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg p-8">
+            {error && (
+              <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+                {error}
               </div>
-            </div>
+            )}
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Prenom
-              </label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <input
-                  type="text"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  required
-                  className="w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Votre prenom"
-                />
+            {success && (
+              <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-600 text-sm flex items-center">
+                <CheckCircle className="h-4 w-4 mr-2 flex-shrink-0" />
+                {success}
               </div>
-            </div>
+            )}
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Nom
-              </label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <input
-                  type="text"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  required
-                  className="w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Votre nom"
-                />
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Email
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <input
+                    type="email"
+                    value={user.email}
+                    disabled
+                    className="w-full pl-10 pr-4 py-3 border rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
+                  />
+                </div>
               </div>
-            </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Telephone
-              </label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Votre numero de telephone"
-                />
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Prenom
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <input
+                    type="text"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    required
+                    className="w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Votre prenom"
+                  />
+                </div>
               </div>
-            </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition disabled:bg-blue-300 flex items-center justify-center"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                  Enregistrement...
-                </>
-              ) : (
-                'Enregistrer'
-              )}
-            </button>
-          </form>
-        </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nom
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <input
+                    type="text"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    required
+                    className="w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Votre nom"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Telephone
+                </label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Votre numero de telephone"
+                  />
+                </div>
+              </div>
+
+              <AnimatedButton
+                type="submit"
+                disabled={loading}
+                className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition disabled:bg-blue-300 flex items-center justify-center"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                    Enregistrement...
+                  </>
+                ) : (
+                  'Enregistrer'
+                )}
+              </AnimatedButton>
+            </form>
+          </div>
+        </FadeIn>
       </div>
-    </div>
+    </PageTransition>
   );
 };
 

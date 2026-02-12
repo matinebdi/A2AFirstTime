@@ -11,6 +11,7 @@ import { Hotels } from './pages/Hotels';
 import { HotelDetail } from './pages/HotelDetail';
 import { PackageDetail } from './pages/PackageDetail';
 import { Profile } from './pages/Profile';
+import { Favorites } from './pages/Favorites';
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
               <Route path="packages/:id" element={<PackageDetail />} />
               <Route path="hotels" element={<Hotels />} />
               <Route path="hotels/:locationId" element={<HotelDetail />} />
+              <Route path="favorites" element={<Favorites />} />
               <Route path="bookings" element={<Bookings />} />
               <Route path="profile" element={<Profile />} />
               <Route path="login" element={<Login />} />
