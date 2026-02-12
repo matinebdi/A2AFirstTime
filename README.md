@@ -540,8 +540,12 @@ GET /api/ready     # Readiness (verifie la connexion Oracle)
 |-------|------|-------------|
 | `/` | Home | Accueil avec packages populaires |
 | `/search` | Search | Recherche avec filtres |
+| `/packages/:id` | PackageDetail | Details d'un package + formulaire reservation |
 | `/hotels` | Hotels | Hotels TripAdvisor |
+| `/hotels/:locationId` | HotelDetail | Details d'un hotel + photos + avis |
+| `/favorites` | Favorites | Mes favoris |
 | `/bookings` | Bookings | Mes reservations |
+| `/profile` | Profile | Profil utilisateur + avatar |
 | `/login` | Login | Connexion |
 | `/signup` | SignUp | Inscription |
 
@@ -595,9 +599,12 @@ L'agent IA connait la page que l'utilisateur consulte et les donnees affichees. 
 - Sur Search: "montre-moi plus de details sur le premier" -> l'agent connait les resultats
 - Sur Bookings: "annule ma derniere reservation" -> l'agent voit la liste des bookings
 
-### Comportement apres reservation
+### Navigation automatique apres action de l'agent
 
-Quand l'agent confirme une reservation via le chat, le frontend navigue automatiquement vers la page Reservations (`/bookings`).
+| Action agent | Navigation automatique |
+|-------------|----------------------|
+| Reservation confirmee (`booking_confirmed`) | `/bookings` |
+| Ajout aux favoris (`add_favorite`) | `/favorites` |
 
 ---
 

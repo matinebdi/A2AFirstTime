@@ -263,6 +263,7 @@ frontend/src/
 4. Tool results with `action` key become UI actions sent back to frontend
 5. Frontend `ChatWidget` handles actions (navigate, show cards, etc.)
 6. After booking confirmation, ChatWidget auto-navigates to /bookings
+7. After adding to favorites, ChatWidget auto-navigates to /favorites
 
 ### UI Agent Tools
 - `search_vacation` - Search packages with filters

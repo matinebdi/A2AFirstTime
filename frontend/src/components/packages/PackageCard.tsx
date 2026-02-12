@@ -85,7 +85,7 @@ export const PackageCard: React.FC<PackageCardProps> = ({ pkg, initialFavorite, 
           >
             <Heart className={`h-5 w-5 ${isFavorite ? 'fill-current' : ''}`} />
           </button>
-          {destination?.average_rating && (
+          {destination?.average_rating != null && destination.average_rating > 0 && (
             <div className="absolute bottom-3 left-3 bg-white/90 px-2 py-1 rounded-full flex items-center text-sm">
               <Star className="h-4 w-4 text-yellow-500 fill-current mr-1" />
               {destination.average_rating.toFixed(1)}

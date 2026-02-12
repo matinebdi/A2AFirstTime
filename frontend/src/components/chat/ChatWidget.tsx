@@ -123,7 +123,10 @@ export const ChatWidget: React.FC = () => {
       case 'add_favorite':
         if (action.package_id && user) {
           favoritesApi.add(action.package_id as string)
-            .then(() => setNotification(action.message as string || 'Ajout aux favoris!'))
+            .then(() => {
+              setNotification(action.message as string || 'Ajout aux favoris!');
+              navigate('/favorites');
+            })
             .catch(() => setNotification('Erreur lors de l\'ajout aux favoris'));
         } else if (!user) {
           navigate('/login');
