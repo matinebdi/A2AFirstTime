@@ -142,7 +142,7 @@ backend/
 ```
 frontend/src/
 ├── components/
-│   ├── Layout.tsx              # Main layout (Header + AnimatePresence + Outlet + Footer)
+│   ├── Layout.tsx              # Main layout (AnimatedBackground + Header + AnimatePresence + Outlet + Footer)
 │   ├── animations/
 │   │   ├── index.ts            # Re-exports all animation components
 │   │   ├── FadeIn.tsx          # Scroll reveal wrapper (direction, delay, duration)
@@ -150,22 +150,28 @@ frontend/src/
 │   │   ├── PageTransition.tsx  # Page entry animation wrapper
 │   │   ├── HeroCarousel.tsx    # Ken Burns carousel (4 images, crossfade)
 │   │   ├── HeroVideo.tsx       # Video background (unused, available)
-│   │   └── AnimatedButton.tsx  # Button hover/tap effects (scale + glow)
+│   │   ├── AnimatedButton.tsx  # Button hover/tap effects (scale + glow)
+│   │   └── AnimatedBackground.tsx # Full-app Ken Burns background (fixed, 5 images)
 │   ├── common/
 │   │   ├── Header.tsx
 │   │   └── Footer.tsx
 │   ├── chat/
 │   │   ├── ChatWidget.tsx      # Floating chat widget (WebSocket)
 │   │   └── ChatErrorBoundary.tsx
+│   ├── search/
+│   │   ├── DualRangeSlider.tsx # Price/duration range slider
+│   │   ├── TagFilter.tsx       # Tag selection filter
+│   │   ├── ActiveFilters.tsx   # Active filter badges
+│   │   └── Pagination.tsx      # Page navigation
 │   └── packages/
 │       └── PackageCard.tsx     # 3D tilt effect (react-parallax-tilt)
 ├── pages/
 │   ├── Home.tsx                # Landing page (hero carousel + featured packages)
-│   ├── Search.tsx              # Package search with filters
+│   ├── Search.tsx              # Package search (dual sliders, tags, pagination, URL state)
 │   ├── Favorites.tsx           # User's favorite packages
 │   ├── PackageDetail.tsx       # Single package view + booking form
-│   ├── Hotels.tsx              # TripAdvisor hotels list (single API call)
-│   ├── HotelDetail.tsx         # Single hotel with photos + reviews
+│   ├── Hotels.tsx              # TripAdvisor hotels grid (3-col cards, single API call)
+│   ├── HotelDetail.tsx         # Single hotel with photos + progressive review reveal
 │   ├── Bookings.tsx            # User's bookings (AG Grid)
 │   ├── Profile.tsx             # User profile + avatar upload
 │   ├── Login.tsx
