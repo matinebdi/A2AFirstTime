@@ -35,19 +35,19 @@ Application complete de reservation de vacances avec assistant IA, integration T
 
 ### Infrastructure
 
-![Diagramme Infrastructure](docs/sc/Mermaid%20Chart%20-%20Create%20complex,%20visual%20diagrams%20with%20text.-2026-02-13-081923.png)
+![Diagramme Infrastructure](docs/sc/Mermaid%20Chart%20-%20Create%20complex,%20visual%20diagrams%20with%20text.-2026-02-13-083840.png)
 
 > Documentation detaillee : [docs/infrastructure.md](docs/infrastructure.md)
 
 ### Base de donnees
 
-![Diagramme de classes](docs/sc/Mermaid%20Chart%20-%20Create%20complex,%20visual%20diagrams%20with%20text.-2026-02-13-074224.png)
+![Diagramme de classes](docs/sc/Mermaid%20Chart%20-%20Create%20complex,%20visual%20diagrams%20with%20text.-2026-02-13-084157.png)
 
 > Documentation detaillee : [docs/class-diagram.md](docs/class-diagram.md)
 
 ### API Endpoints
 
-![Diagramme API Endpoints](docs/sc/Mermaid%20Chart%20-%20Create%20complex,%20visual%20diagrams%20with%20text.-2026-02-13-074628.png)
+![Diagramme API Endpoints](docs/sc/Mermaid%20Chart%20-%20Create%20complex,%20visual%20diagrams%20with%20text.-2026-02-13-084040.png)
 
 > Documentation detaillee : [docs/api-endpoints.md](docs/api-endpoints.md)
 

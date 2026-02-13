@@ -1,6 +1,6 @@
 # Diagramme d'Infrastructure - VacanceAI
 
-![Diagramme Infrastructure](sc/Mermaid%20Chart%20-%20Create%20complex,%20visual%20diagrams%20with%20text.-2026-02-13-081923.png)
+![Diagramme Infrastructure](sc/Mermaid%20Chart%20-%20Create%20complex,%20visual%20diagrams%20with%20text.-2026-02-13-083840.png)
 
 ## Description
 

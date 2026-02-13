@@ -1,6 +1,6 @@
 # Diagramme de Classes - Backend VacanceAI
 
-![Diagramme de classes](sc/Mermaid%20Chart%20-%20Create%20complex,%20visual%20diagrams%20with%20text.-2026-02-13-074224.png)
+![Diagramme de classes](sc/Mermaid%20Chart%20-%20Create%20complex,%20visual%20diagrams%20with%20text.-2026-02-13-084157.png)
 
 ## Description
 

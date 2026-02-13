@@ -1,6 +1,6 @@
 # Diagramme des API Endpoints - Backend VacanceAI
 
-![Diagramme API Endpoints](sc/Mermaid%20Chart%20-%20Create%20complex,%20visual%20diagrams%20with%20text.-2026-02-13-074628.png)
+![Diagramme API Endpoints](sc/Mermaid%20Chart%20-%20Create%20complex,%20visual%20diagrams%20with%20text.-2026-02-13-084040.png)
 
 ## Description
 
