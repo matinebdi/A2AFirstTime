@@ -102,36 +102,7 @@ docker volume create oracle-xe-data
 
 ## Project Structure
 
-```
-ui-automation-a2a/
-├── backend/
-│   ├── api/                        # FastAPI (main.py + 9 routers)
-│   ├── agents/                     # AI (orchestrator, database, ui)
-│   ├── a2a/                        # Agent-to-Agent protocol
-│   ├── auth/                       # JWT service + middleware
-│   ├── database/                   # SQLAlchemy ORM (models, session, schema)
-│   ├── logging_config.py
-│   ├── log_apps/                   # Logs (mounted via K8s hostPath)
-│   ├── config.py
-│   ├── telemetry.py
-│   └── Dockerfile
-│
-├── frontend/
-│   ├── src/
-│   │   ├── components/             # Layout, animations, chat, search, packages
-│   │   ├── pages/                  # 10 pages
-│   │   ├── contexts/               # AuthContext + PageContext
-│   │   ├── hooks/                  # useChat (WebSocket)
-│   │   └── services/               # API clients
-│   └── Dockerfile.prod
-│
-├── scripts/seed_oracle.py          # Data seeding
-├── k8s/                            # Kubernetes manifests
-├── docs/                           # Full documentation
-├── setup.ps1                       # Automated setup
-├── compose.yaml                    # Docker Compose (Oracle)
-└── README.md
-```
+![Project Structure](docs/sc/Mermaid%20Chart%20-%20Create%20complex,%20visual%20diagrams%20with%20text.-2026-02-13-092939.png)
 
 ---
 
