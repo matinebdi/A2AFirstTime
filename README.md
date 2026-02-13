@@ -84,6 +84,10 @@ Les 40 endpoints FastAPI organises en 9 routers ([documentation detaillee](docs/
 
 ### Infrastructure
 
+![Diagramme Infrastructure](docs/sc/Mermaid%20Chart%20-%20Create%20complex,%20visual%20diagrams%20with%20text.-2026-02-13-081923.png)
+
+> Documentation detaillee : [docs/infrastructure.md](docs/infrastructure.md)
+
 ```
                     Kubernetes (namespace: vacanceai)
   ┌──────────────────────────────────────────────────────────┐
