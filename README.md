@@ -70,6 +70,20 @@ Application complete de reservation de vacances avec assistant IA, integration T
 
 ## Architecture
 
+### Diagramme de classes (modeles ORM)
+
+Les 11 modeles SQLAlchemy et leurs relations ([documentation detaillee](docs/class-diagram.md)) :
+
+![Diagramme de classes](docs/sc/Mermaid%20Chart%20-%20Create%20complex,%20visual%20diagrams%20with%20text.-2026-02-13-074224.png)
+
+### Diagramme des API Endpoints
+
+Les 40 endpoints FastAPI organises en 9 routers ([documentation detaillee](docs/api-endpoints.md)) :
+
+![Diagramme API Endpoints](docs/sc/Mermaid%20Chart%20-%20Create%20complex,%20visual%20diagrams%20with%20text.-2026-02-13-074628.png)
+
+### Infrastructure
+
 ```
                     Kubernetes (namespace: vacanceai)
   ┌──────────────────────────────────────────────────────────┐
@@ -180,9 +194,12 @@ ui-automation-a2a/
 │   └── ingress.yaml
 │
 ├── docs/                           # Documentation DDD
+│   ├── class-diagram.md            # Diagramme de classes ORM
+│   ├── api-endpoints.md            # Diagramme des API endpoints
 │   ├── functional-description.md   # Description fonctionnelle
 │   ├── ubiquitous-language.md      # Langage ubiquitaire
-│   └── domain-model.md             # Modele de domaine (UML Mermaid)
+│   ├── domain-model.md             # Modele de domaine (UML Mermaid)
+│   └── sc/                         # Screenshots des diagrammes Mermaid
 │
 ├── setup.ps1                       # Setup automatique (Oracle + build + K8s)
 ├── .env                            # Variables d'environnement
@@ -419,6 +436,10 @@ kubectl delete -f k8s/
 
 ## Base de donnees
 
+![Diagramme de classes](docs/sc/Mermaid%20Chart%20-%20Create%20complex,%20visual%20diagrams%20with%20text.-2026-02-13-074224.png)
+
+> Documentation detaillee : [docs/class-diagram.md](docs/class-diagram.md)
+
 ### Oracle 21c XE
 
 - **User** : `VACANCEAI` / `vacanceai`
@@ -458,6 +479,10 @@ kubectl delete -f k8s/
 ---
 
 ## API Backend
+
+![Diagramme API Endpoints](docs/sc/Mermaid%20Chart%20-%20Create%20complex,%20visual%20diagrams%20with%20text.-2026-02-13-074628.png)
+
+> Documentation detaillee : [docs/api-endpoints.md](docs/api-endpoints.md)
 
 ### Authentification (JWT)
 
