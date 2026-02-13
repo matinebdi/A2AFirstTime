@@ -1,5 +1,7 @@
 # Agent IA et PageContext - VacanceAI
 
+![Diagramme Agent IA](sc/Mermaid%20Chart%20-%20Create%20complex,%20visual%20diagrams%20with%20text.-2026-02-13-090149.png)
+
 L'assistant IA de VacanceAI est propulse par Google Gemini 2.0 Flash et orchestre via LangChain + LangGraph. Il est context-aware : il connait la page que l'utilisateur consulte et les donnees affichees.
 
 ---

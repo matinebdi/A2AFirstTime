@@ -41,7 +41,7 @@ Application complete de reservation de vacances avec assistant IA, integration T
 
 ### Base de donnees
 
-![Diagramme de classes](docs/sc/Mermaid%20Chart%20-%20Create%20complex,%20visual%20diagrams%20with%20text.-2026-02-13-084157.png)
+![Diagramme de classes](docs/sc/Mermaid%20Chart%20-%20Create%20complex,%20visual%20diagrams%20with%20text.-2026-02-13-090534.png)
 
 > Documentation detaillee : [docs/class-diagram.md](docs/class-diagram.md)
 
@@ -50,6 +50,12 @@ Application complete de reservation de vacances avec assistant IA, integration T
 ![Diagramme API Endpoints](docs/sc/Mermaid%20Chart%20-%20Create%20complex,%20visual%20diagrams%20with%20text.-2026-02-13-084040.png)
 
 > Documentation detaillee : [docs/api-endpoints.md](docs/api-endpoints.md)
+
+### Agent IA
+
+![Diagramme Agent IA](docs/sc/Mermaid%20Chart%20-%20Create%20complex,%20visual%20diagrams%20with%20text.-2026-02-13-090149.png)
+
+> Documentation detaillee : [docs/agent-ia.md](docs/agent-ia.md)
 
 ---
 
