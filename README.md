@@ -80,33 +80,7 @@ Application complete de reservation de vacances avec assistant IA, integration T
 
 > Documentation detaillee : [docs/infrastructure.md](docs/infrastructure.md)
 
-```
-                    Kubernetes (namespace: vacanceai)
-  ┌──────────────────────────────────────────────────────────┐
-  │                                                          │
-  │   ┌─────────────┐    Ingress NGINX (localhost:80)        │
-  │   │   Ingress   │──── /api, /swagger ──► backend:8000   │
-  │   │   NGINX     │──── / ──────────────► frontend:80     │
-  │   └─────────────┘                                        │
-  │                                                          │
-  │   ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
-  │   │   Backend    │  │   Frontend   │  │    Jaeger    │  │
-  │   │   FastAPI    │  │  React/nginx │  │   Traces     │  │
-  │   │   :8000      │  │   :80        │  │   :16686     │  │
-  │   └──────┬───────┘  └──────────────┘  └──────────────┘  │
-  │          │ SQLAlchemy ORM + oracledb (thin)               │
-  │          │ log_apps/ (hostPath volume -> repo local)     │
-  └──────────┼───────────────────────────────────────────────┘
-             │ host.docker.internal:1521
-  ┌──────────▼───────────────────────────────────────────────┐
-  │              Docker Compose                               │
-  │   ┌──────────────────────────────────────┐               │
-  │   │          Oracle 21c XE               │               │
-  │   │   Schema VACANCEAI (11 tables)       │               │
-  │   │   localhost:1521                     │               │
-  │   └──────────────────────────────────────┘               │
-  └──────────────────────────────────────────────────────────┘
-```
+
 
 ### Structure des dossiers
 
