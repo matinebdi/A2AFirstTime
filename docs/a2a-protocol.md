@@ -43,24 +43,7 @@ L'Agent Card est un document JSON expose a `/.well-known/agent.json` qui decrit 
 
 ## Flux de communication
 
-```
-Utilisateur
-    │
-    ▼
-WebSocket (/api/conversations/ws/{id})
-    │
-    ▼
-Orchestrator (LangGraph)
-    ├──► UI Agent ──► Tools (search, book, navigate...)
-    │                   │
-    │                   ▼
-    │               Actions UI -> Frontend
-    │
-    └──► Database Agent ──► Tools (query Oracle)
-                              │
-                              ▼
-                          Oracle 21c XE
-```
+![Diagramme Agent IA](sc/Mermaid%20Chart%20-%20Create%20complex,%20visual%20diagrams%20with%20text.-2026-02-13-090149.png)
 
 1. Le message utilisateur arrive via WebSocket
 2. L'orchestrateur classifie le message et le route vers l'agent adapte
