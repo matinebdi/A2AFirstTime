@@ -158,7 +158,6 @@ frontend/src/
 │   │   ├── StaggerContainer.tsx # Staggered list/grid animations
 │   │   ├── PageTransition.tsx  # Page entry animation wrapper
 │   │   ├── HeroCarousel.tsx    # Ken Burns carousel (4 images, crossfade)
-│   │   ├── HeroVideo.tsx       # Video background (unused, available)
 │   │   ├── AnimatedButton.tsx  # Button hover/tap effects (scale + glow)
 │   │   └── AnimatedBackground.tsx # Full-app Ken Burns background (fixed, 5 images)
 │   ├── common/
