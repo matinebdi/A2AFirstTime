@@ -1,132 +1,132 @@
-# Diagramme des API Endpoints - Backend VacanceAI
+# API Endpoints - VacanceAI Backend
 
-![Diagramme API Endpoints](sc/Mermaid%20Chart%20-%20Create%20complex,%20visual%20diagrams%20with%20text.-2026-02-13-084040.png)
+![API Endpoints Diagram](sc/Mermaid%20Chart%20-%20Create%20complex,%20visual%20diagrams%20with%20text.-2026-02-13-084040.png)
 
 ## Description
 
-Ce diagramme represente les 40 endpoints exposes par le backend FastAPI de VacanceAI, organises en 9 routers. Chaque router correspond a un fichier dans `backend/api/routes/`.
+This diagram represents the 40 endpoints exposed by the VacanceAI FastAPI backend, organized into 9 routers. Each router corresponds to a file in `backend/api/routes/`.
 
 ---
 
-## Vue d'ensemble
+## Overview
 
-| Router | Prefixe | Endpoints | Auth requise |
-|--------|---------|-----------|--------------|
-| Auth | `/api/auth` | 8 | Partielle |
-| Packages | `/api/packages` | 4 | Non |
-| Bookings | `/api/bookings` | 5 | Oui |
-| Favorites | `/api/favorites` | 4 | Oui |
-| Reviews | `/api/reviews` | 2 | Partielle |
-| Destinations | `/api/destinations` | 3 | Non |
-| Conversations | `/api/conversations` | 5 | Optionnelle |
-| TripAdvisor | `/api/tripadvisor` | 6 | Non |
-| Health | `/api` | 2 | Non |
+| Router | Prefix | Endpoints | Auth Required |
+|--------|--------|-----------|---------------|
+| Auth | `/api/auth` | 8 | Partial |
+| Packages | `/api/packages` | 4 | No |
+| Bookings | `/api/bookings` | 5 | Yes |
+| Favorites | `/api/favorites` | 4 | Yes |
+| Reviews | `/api/reviews` | 2 | Partial |
+| Destinations | `/api/destinations` | 3 | No |
+| Conversations | `/api/conversations` | 5 | Optional |
+| TripAdvisor | `/api/tripadvisor` | 6 | No |
+| Health | `/api` | 2 | No |
 | **Total** | | **39 REST + 1 WebSocket** | |
 
 ---
 
 ## Auth (`backend/api/routes/auth.py`)
 
-Gestion de l'authentification JWT avec refresh tokens.
+JWT authentication with refresh tokens.
 
-| Methode | Endpoint | Description | Auth |
-|---------|----------|-------------|------|
-| POST | `/api/auth/signup` | Inscription (email, password, first_name, last_name) | Non |
-| POST | `/api/auth/login` | Connexion -> access_token + refresh_token | Non |
-| POST | `/api/auth/logout` | Deconnexion (revoque le refresh token) | Oui |
-| POST | `/api/auth/refresh` | Renouvellement du token (rotation du refresh) | Non |
-| GET | `/api/auth/me` | Profil utilisateur courant | Oui |
-| PATCH | `/api/auth/me` | Modifier le profil (first_name, last_name, phone, avatar_url) | Oui |
-| POST | `/api/auth/avatar` | Upload d'avatar (jpg/png/webp, max 2 MB) | Oui |
-| GET | `/api/auth/avatar/{filename}` | Telecharger un avatar | Non |
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| POST | `/api/auth/signup` | Register (email, password, first_name, last_name) | No |
+| POST | `/api/auth/login` | Login -> access_token + refresh_token | No |
+| POST | `/api/auth/logout` | Logout (revokes the refresh token) | Yes |
+| POST | `/api/auth/refresh` | Token renewal (refresh token rotation) | No |
+| GET | `/api/auth/me` | Current user profile | Yes |
+| PATCH | `/api/auth/me` | Update profile (first_name, last_name, phone, avatar_url) | Yes |
+| POST | `/api/auth/avatar` | Avatar upload (jpg/png/webp, max 2 MB) | Yes |
+| GET | `/api/auth/avatar/{filename}` | Download an avatar | No |
 
 ---
 
 ## Packages (`backend/api/routes/packages.py`)
 
-Consultation du catalogue de packages vacances.
+Vacation package catalog browsing.
 
-| Methode | Endpoint | Description | Parametres |
-|---------|----------|-------------|------------|
-| GET | `/api/packages` | Liste avec filtres | `destination`, `destination_id`, `min_price`, `max_price`, `min_duration`, `max_duration`, `tags`, `start_date`, `sort_by`, `limit`, `offset` |
-| GET | `/api/packages/featured` | Packages populaires | `limit` (1-20, defaut 6) |
-| GET | `/api/packages/{id}` | Details d'un package + destination + avis | - |
-| GET | `/api/packages/{id}/availability` | Verification de disponibilite | `start_date` (requis), `num_persons` (1-10) |
+| Method | Endpoint | Description | Parameters |
+|--------|----------|-------------|------------|
+| GET | `/api/packages` | List with filters | `destination`, `destination_id`, `min_price`, `max_price`, `min_duration`, `max_duration`, `tags`, `start_date`, `sort_by`, `limit`, `offset` |
+| GET | `/api/packages/featured` | Popular packages | `limit` (1-20, default 6) |
+| GET | `/api/packages/{id}` | Package details + destination + reviews | - |
+| GET | `/api/packages/{id}/availability` | Availability check | `start_date` (required), `num_persons` (1-10) |
 
-**Tri disponible** (`sort_by`) : `price_asc`, `price_desc`, `duration_asc`, `duration_desc`, `name_asc`
+**Sort options** (`sort_by`): `price_asc`, `price_desc`, `duration_asc`, `duration_desc`, `name_asc`
 
 ---
 
 ## Bookings (`backend/api/routes/bookings.py`)
 
-Gestion des reservations. Tous les endpoints necessitent une authentification.
+Booking management. All endpoints require authentication.
 
-| Methode | Endpoint | Description | Body |
-|---------|----------|-------------|------|
-| GET | `/api/bookings` | Mes reservations (avec package + destination) | `status` (filtre optionnel) |
-| POST | `/api/bookings` | Creer une reservation | `package_id`, `start_date`, `num_persons`, `special_requests?` |
-| GET | `/api/bookings/{id}` | Details d'une reservation | - |
-| PATCH | `/api/bookings/{id}` | Modifier (statut, demandes speciales) | `status?`, `special_requests?` |
-| DELETE | `/api/bookings/{id}` | Supprimer une reservation | - |
+| Method | Endpoint | Description | Body |
+|--------|----------|-------------|------|
+| GET | `/api/bookings` | My bookings (with package + destination) | `status` (optional filter) |
+| POST | `/api/bookings` | Create a booking | `package_id`, `start_date`, `num_persons`, `special_requests?` |
+| GET | `/api/bookings/{id}` | Booking details | - |
+| PATCH | `/api/bookings/{id}` | Update (status, special requests) | `status?`, `special_requests?` |
+| DELETE | `/api/bookings/{id}` | Delete a booking | - |
 
 ---
 
 ## Favorites (`backend/api/routes/favorites.py`)
 
-Gestion des favoris. Tous les endpoints necessitent une authentification.
+Favorites management. All endpoints require authentication.
 
-| Methode | Endpoint | Description |
-|---------|----------|-------------|
-| GET | `/api/favorites` | Mes favoris (avec package + destination) |
-| POST | `/api/favorites/{package_id}` | Ajouter un package aux favoris |
-| DELETE | `/api/favorites/{package_id}` | Retirer un package des favoris |
-| GET | `/api/favorites/check/{package_id}` | Verifier si un package est en favori |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/favorites` | My favorites (with package + destination) |
+| POST | `/api/favorites/{package_id}` | Add a package to favorites |
+| DELETE | `/api/favorites/{package_id}` | Remove a package from favorites |
+| GET | `/api/favorites/check/{package_id}` | Check if a package is favorited |
 
 ---
 
 ## Reviews (`backend/api/routes/reviews.py`)
 
-Avis sur les packages.
+Package reviews.
 
-| Methode | Endpoint | Description | Auth |
-|---------|----------|-------------|------|
-| GET | `/api/reviews/package/{package_id}` | Avis d'un package (avec infos auteur) | Non |
-| POST | `/api/reviews` | Publier un avis (rating 1-5, commentaire) | Oui |
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | `/api/reviews/package/{package_id}` | Package reviews (with author info) | No |
+| POST | `/api/reviews` | Submit a review (rating 1-5, comment) | Yes |
 
-**Parametres GET** : `limit` (1-50, defaut 10), `offset` (defaut 0)
+**GET parameters**: `limit` (1-50, default 10), `offset` (default 0)
 
 ---
 
 ## Destinations (`backend/api/routes/destinations.py`)
 
-Consultation des destinations.
+Destination browsing.
 
-| Methode | Endpoint | Description | Parametres |
-|---------|----------|-------------|------------|
-| GET | `/api/destinations` | Liste des destinations | `country`, `tags` (comma-separated), `limit` (1-100, defaut 20) |
-| GET | `/api/destinations/{id}` | Details + packages associes | - |
-| GET | `/api/destinations/{id}/packages` | Packages d'une destination | `min_price`, `max_price` |
+| Method | Endpoint | Description | Parameters |
+|--------|----------|-------------|------------|
+| GET | `/api/destinations` | List destinations | `country`, `tags` (comma-separated), `limit` (1-100, default 20) |
+| GET | `/api/destinations/{id}` | Details + associated packages | - |
+| GET | `/api/destinations/{id}/packages` | Packages for a destination | `min_price`, `max_price` |
 
 ---
 
 ## Conversations (`backend/api/routes/conversations.py`)
 
-Chat avec l'assistant IA. Authentification optionnelle (lie la conversation a l'utilisateur si connecte).
+AI assistant chat. Authentication is optional (links conversation to user if logged in).
 
-| Methode | Endpoint | Description |
-|---------|----------|-------------|
-| **WS** | `/api/conversations/ws/{id}` | **WebSocket** temps reel (message + contexte page) |
-| POST | `/api/conversations/{id}/message` | Envoyer un message (fallback REST) |
-| GET | `/api/conversations/{id}` | Historique de la conversation |
-| DELETE | `/api/conversations/{id}` | Supprimer une conversation |
-| POST | `/api/conversations/new` | Creer une nouvelle conversation |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| **WS** | `/api/conversations/ws/{id}` | **WebSocket** real-time (message + page context) |
+| POST | `/api/conversations/{id}/message` | Send a message (REST fallback) |
+| GET | `/api/conversations/{id}` | Conversation history |
+| DELETE | `/api/conversations/{id}` | Delete a conversation |
+| POST | `/api/conversations/new` | Create a new conversation |
 
-### Format WebSocket
+### WebSocket Format
 
-**Envoi** :
+**Send** (client -> server):
 ```json
 {
-  "message": "Reserve celui-ci pour 2 personnes",
+  "message": "Book this one for 2 people",
   "context": {
     "user": {"id": "...", "email": "..."},
     "page": {"page": "package_detail", "data": {"package_id": "..."}}
@@ -134,10 +134,10 @@ Chat avec l'assistant IA. Authentification optionnelle (lie la conversation a l'
 }
 ```
 
-**Reception** :
+**Receive** (server -> client):
 ```json
 {
-  "response": "Reservation confirmee !",
+  "response": "Booking confirmed!",
   "ui_actions": [{"action": "booking_confirmed", "data": {...}}],
   "agent_type": "ui",
   "timestamp": "2026-02-13T..."
@@ -148,54 +148,54 @@ Chat avec l'assistant IA. Authentification optionnelle (lie la conversation a l'
 
 ## TripAdvisor (`backend/api/routes/tripadvisor.py`)
 
-Donnees hotels importees depuis TripAdvisor.
+Hotel data imported from TripAdvisor.
 
-| Methode | Endpoint | Description | Parametres |
-|---------|----------|-------------|------------|
-| GET | `/api/tripadvisor/locations` | Liste des hotels | `country` |
-| GET | `/api/tripadvisor/locations-with-details` | Hotels + photos + avis + rating moyen (optimise, une seule requete) | `country` |
-| GET | `/api/tripadvisor/countries` | Liste des pays disponibles | - |
-| GET | `/api/tripadvisor/locations/{id}` | Details d'un hotel | - |
-| GET | `/api/tripadvisor/locations/{id}/photos` | Photos d'un hotel | - |
-| GET | `/api/tripadvisor/locations/{id}/reviews` | Avis d'un hotel | - |
+| Method | Endpoint | Description | Parameters |
+|--------|----------|-------------|------------|
+| GET | `/api/tripadvisor/locations` | List hotels | `country` |
+| GET | `/api/tripadvisor/locations-with-details` | Hotels + photos + reviews + average rating (optimized, single query) | `country` |
+| GET | `/api/tripadvisor/countries` | List available countries | - |
+| GET | `/api/tripadvisor/locations/{id}` | Hotel details | - |
+| GET | `/api/tripadvisor/locations/{id}/photos` | Hotel photos | - |
+| GET | `/api/tripadvisor/locations/{id}/reviews` | Hotel reviews | - |
 
-**Note** : L'endpoint `/locations-with-details` utilise `joinedload()` pour charger photos et avis en une seule requete SQL, evitant les N+1 queries.
+**Note**: The `/locations-with-details` endpoint uses `joinedload()` to load photos and reviews in a single SQL query, avoiding N+1 queries.
 
 ---
 
 ## Health (`backend/api/routes/health.py`)
 
-Probes Kubernetes pour le monitoring.
+Kubernetes monitoring probes.
 
-| Methode | Endpoint | Description | Code si erreur |
-|---------|----------|-------------|----------------|
-| GET | `/api/health` | Liveness probe (toujours 200) | - |
-| GET | `/api/ready` | Readiness probe (verifie la connexion Oracle) | 503 |
-
----
-
-## Authentification
-
-Le backend utilise un systeme JWT custom :
-
-1. **Login** : retourne un `access_token` (60 min) + `refresh_token` (30 jours)
-2. **Requetes authentifiees** : header `Authorization: Bearer <access_token>`
-3. **Refresh** : quand l'access token expire, envoyer le refresh token pour en obtenir un nouveau (rotation automatique)
-4. **Logout** : revoque le refresh token en base
-
-Les endpoints protege utilisent le middleware `get_current_user` (obligatoire) ou `get_optional_user` (pour les conversations).
+| Method | Endpoint | Description | Error Code |
+|--------|----------|-------------|------------|
+| GET | `/api/health` | Liveness probe (always 200) | - |
+| GET | `/api/ready` | Readiness probe (checks Oracle connection) | 503 |
 
 ---
 
-## Codes de reponse
+## Authentication
 
-| Code | Signification |
-|------|---------------|
-| 200 | Succes |
-| 201 | Ressource creee (booking, review, favorite) |
-| 400 | Requete invalide (validation echouee) |
-| 401 | Non authentifie |
-| 403 | Acces interdit (pas proprietaire de la ressource) |
-| 404 | Ressource non trouvee |
-| 409 | Conflit (email deja pris, favori deja existant) |
-| 503 | Service indisponible (Oracle deconnecte) |
+The backend uses a custom JWT system:
+
+1. **Login**: returns an `access_token` (60 min) + `refresh_token` (30 days)
+2. **Authenticated requests**: `Authorization: Bearer <access_token>` header
+3. **Refresh**: when the access token expires, send the refresh token to get a new one (automatic rotation)
+4. **Logout**: revokes the refresh token in the database
+
+Protected endpoints use the `get_current_user` middleware (required) or `get_optional_user` (for conversations).
+
+---
+
+## Response Codes
+
+| Code | Meaning |
+|------|---------|
+| 200 | Success |
+| 201 | Resource created (booking, review, favorite) |
+| 400 | Bad request (validation failed) |
+| 401 | Unauthorized |
+| 403 | Forbidden (not resource owner) |
+| 404 | Resource not found |
+| 409 | Conflict (email already taken, favorite already exists) |
+| 503 | Service unavailable (Oracle disconnected) |

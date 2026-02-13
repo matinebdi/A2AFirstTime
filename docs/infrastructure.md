@@ -1,116 +1,116 @@
-# Diagramme d'Infrastructure - VacanceAI
+# Infrastructure Diagram - VacanceAI
 
-![Diagramme Infrastructure](sc/Mermaid%20Chart%20-%20Create%20complex,%20visual%20diagrams%20with%20text.-2026-02-13-083840.png)
+![Infrastructure Diagram](sc/Mermaid%20Chart%20-%20Create%20complex,%20visual%20diagrams%20with%20text.-2026-02-13-083840.png)
 
 ## Description
 
-Ce diagramme represente l'architecture d'infrastructure de VacanceAI, composee de deux couches de conteneurisation : Kubernetes pour l'application et Docker Compose pour la base de donnees Oracle.
+This diagram represents the VacanceAI infrastructure architecture, composed of two containerization layers: Kubernetes for the application and Docker Compose for the Oracle database.
 
 ---
 
-## Composants
+## Components
 
 ### Client (React SPA)
 
-Le navigateur de l'utilisateur execute l'application React (Single Page Application). Il communique avec le backend via HTTP (API REST) et WebSocket (chat IA en temps reel).
+The user's browser runs the React application (Single Page Application). It communicates with the backend via HTTP (REST API) and WebSocket (real-time AI chat).
 
 ### Kubernetes (namespace: vacanceai)
 
-Tous les composants applicatifs sont deployes dans un cluster Kubernetes local (Docker Desktop).
+All application components are deployed in a local Kubernetes cluster (Docker Desktop).
 
 #### Ingress NGINX (localhost:80)
 
-Point d'entree unique qui route le trafic :
+Single entry point that routes traffic:
 - `/api/*`, `/swagger`, `/redoc` -> Backend (port 8000)
 - `/*` -> Frontend (port 80)
-- Support WebSocket avec `proxy-read-timeout: 3600s` pour les connexions chat longues
+- WebSocket support with `proxy-read-timeout: 3600s` for long-lived chat connections
 
 #### Backend - FastAPI (:8000)
 
-Serveur Python FastAPI avec Uvicorn :
-- API REST (40 endpoints)
-- WebSocket pour le chat IA
-- Agents IA (LangChain + LangGraph)
-- Authentification JWT
-- ORM SQLAlchemy vers Oracle
-- Traces OpenTelemetry vers Jaeger
-- Logs rotatifs vers le volume hostPath
+Python FastAPI server with Uvicorn:
+- REST API (40 endpoints)
+- WebSocket for AI chat
+- AI Agents (LangChain + LangGraph)
+- JWT authentication
+- SQLAlchemy ORM to Oracle
+- OpenTelemetry traces to Jaeger
+- Rotating logs to hostPath volume
 
 #### Frontend - React + nginx (:80)
 
-Application React 18 buildee et servie par nginx :
-- SPA avec routing cote client
-- Tailwind CSS + Framer Motion pour les animations
-- Communication API via fetch + WebSocket
+React 18 application built and served by nginx:
+- SPA with client-side routing
+- Tailwind CSS + Framer Motion for animations
+- API communication via fetch + WebSocket
 
 #### Jaeger (:16686)
 
-Collecteur de traces distribuees (OpenTelemetry) :
-- Interface web accessible via NodePort 31686
-- Recoit les traces du backend pour le monitoring des requetes
+Distributed tracing collector (OpenTelemetry):
+- Web interface accessible via NodePort 31686
+- Receives traces from the backend for request monitoring
 
 #### log_apps (hostPath volume)
 
-Volume Kubernetes monte depuis le pod backend vers le systeme de fichiers local :
-- Pod : `/app/log_apps/`
-- Local : `backend/log_apps/`
-- 4 fichiers : `app.log`, `agents.log`, `sql.log`, `errors.log`
-- Rotation automatique (5 MB max, 3 backups)
+Kubernetes volume mounted from the backend pod to the local filesystem:
+- Pod: `/app/log_apps/`
+- Local: `backend/log_apps/`
+- 4 files: `app.log`, `agents.log`, `sql.log`, `errors.log`
+- Automatic rotation (5 MB max, 3 backups)
 
 ### Docker Compose
 
 #### Oracle 21c XE (localhost:1521)
 
-Base de donnees Oracle en conteneur Docker (separee de Kubernetes) :
-- Schema `VACANCEAI` avec 11 tables + triggers
-- Volume persistant `oracle-xe-data`
-- Le backend K8s se connecte via `host.docker.internal:1521`
-- Mode thin oracledb (pas d'Oracle Instant Client requis)
+Oracle database in a Docker container (separate from Kubernetes):
+- `VACANCEAI` schema with 11 tables + triggers
+- Persistent volume `oracle-xe-data`
+- K8s backend connects via `host.docker.internal:1521`
+- Thin oracledb mode (no Oracle Instant Client required)
 
 ### Google Gemini 2.0 Flash
 
-Service IA externe (API Google) :
-- Utilise par les agents LangChain/LangGraph
-- Orchestrateur, agent database et agent UI
-- Connexion via `GOOGLE_API_KEY`
+External AI service (Google API):
+- Used by LangChain/LangGraph agents
+- Orchestrator, database agent, and UI agent
+- Connection via `GOOGLE_API_KEY`
 
 ---
 
-## Flux de communication
+## Communication Flows
 
-| Source | Destination | Protocole | Description |
-|--------|-------------|-----------|-------------|
-| Client | Ingress | HTTP/WS | Requetes utilisateur |
-| Ingress | Backend | HTTP/WS | Routage /api/* |
-| Ingress | Frontend | HTTP | Routage /* |
-| Backend | Oracle | TCP (1521) | Requetes SQL via SQLAlchemy |
-| Backend | Gemini | HTTPS | Appels API IA |
-| Backend | Jaeger | gRPC/HTTP | Envoi de traces |
-| Backend | log_apps | Filesystem | Ecriture des logs |
-| log_apps | Local | hostPath | Montage volume K8s |
+| Source | Destination | Protocol | Description |
+|--------|-------------|----------|-------------|
+| Client | Ingress | HTTP/WS | User requests |
+| Ingress | Backend | HTTP/WS | Routing /api/* |
+| Ingress | Frontend | HTTP | Routing /* |
+| Backend | Oracle | TCP (1521) | SQL queries via SQLAlchemy |
+| Backend | Gemini | HTTPS | AI API calls |
+| Backend | Jaeger | gRPC/HTTP | Trace export |
+| Backend | log_apps | Filesystem | Log writing |
+| log_apps | Local | hostPath | K8s volume mount |
 
 ---
 
-## Manifestes Kubernetes
+## Kubernetes Manifests
 
-| Fichier | Ressource | Description |
-|---------|-----------|-------------|
+| File | Resource | Description |
+|------|----------|-------------|
 | `k8s/namespace.yaml` | Namespace | `vacanceai` |
 | `k8s/secrets.yaml` | Secret | Credentials (gitignored) |
-| `k8s/configmap.yaml` | ConfigMap | Variables d'environnement |
-| `k8s/backend.yaml` | Deployment + Service | Backend FastAPI |
-| `k8s/frontend.yaml` | Deployment + Service | Frontend React/nginx |
+| `k8s/configmap.yaml` | ConfigMap | Environment variables |
+| `k8s/backend.yaml` | Deployment + Service | FastAPI backend |
+| `k8s/frontend.yaml` | Deployment + Service | React/nginx frontend |
 | `k8s/jaeger.yaml` | Deployment + Service + NodePort | Jaeger traces |
-| `k8s/ingress.yaml` | Ingress | Routage NGINX |
+| `k8s/ingress.yaml` | Ingress | NGINX routing |
 
 ---
 
-## URLs d'acces
+## Access URLs
 
 | Service | URL | Type |
 |---------|-----|------|
 | Frontend | http://localhost | Ingress |
-| API Backend | http://localhost/api/health | Ingress |
+| Backend API | http://localhost/api/health | Ingress |
 | Swagger | http://localhost/swagger | Ingress |
 | ReDoc | http://localhost/redoc | Ingress |
 | Jaeger UI | http://localhost:31686 | NodePort |

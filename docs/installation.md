@@ -1,45 +1,45 @@
-# Installation et Deploiement - VacanceAI
+# Installation and Deployment - VacanceAI
 
 ---
 
-## Prerequis
+## Prerequisites
 
-- **Docker Desktop** (v24+) avec **Kubernetes active** (Settings > Kubernetes > Enable)
-- **kubectl** (inclus avec Docker Desktop)
+- **Docker Desktop** (v24+) with **Kubernetes enabled** (Settings > Kubernetes > Enable)
+- **kubectl** (included with Docker Desktop)
 - **Git**
-- **Python 3.12+** (pour le script de seed)
+- **Python 3.12+** (for the seed script)
 
 ---
 
-## Option A : Setup automatique (recommande)
+## Option A: Automated Setup (recommended)
 
 ```powershell
 git clone https://github.com/matinebdi/A2AFirstTime.git
 cd A2AFirstTime
 docker volume create oracle-xe-data
 
-# Configurer .env (voir section Configuration)
+# Configure .env (see Configuration section)
 
 .\setup.ps1
 ```
 
-Le script `setup.ps1` execute automatiquement :
-1. Verification des prerequis (Docker, kubectl, K8s, .env)
-2. Demarrage Oracle (docker compose) + healthcheck
-3. Initialisation du schema Oracle
-4. Build des images Docker (backend + frontend)
-5. Installation Ingress NGINX Controller v1.12.0
-6. Generation des secrets K8s depuis .env (base64)
-7. Deploiement des manifests Kubernetes
-8. Attente que les pods soient Ready
+The `setup.ps1` script automatically executes:
+1. Prerequisites check (Docker, kubectl, K8s, .env)
+2. Oracle startup (docker compose) + healthcheck
+3. Oracle schema initialization
+4. Docker image builds (backend + frontend)
+5. Ingress NGINX Controller v1.12.0 installation
+6. K8s secrets generation from .env (base64)
+7. Kubernetes manifest deployment
+8. Pod readiness wait
 
-Flags optionnels : `-SkipOracle`, `-SkipBuild`, `-SkipSchema`
+Optional flags: `-SkipOracle`, `-SkipBuild`, `-SkipSchema`
 
 ---
 
-## Option B : Setup manuel
+## Option B: Manual Setup
 
-### 1. Cloner le repository
+### 1. Clone the Repository
 
 ```bash
 git clone https://github.com/matinebdi/A2AFirstTime.git
@@ -47,7 +47,7 @@ cd A2AFirstTime
 docker volume create oracle-xe-data
 ```
 
-### 2. Installer l'Ingress NGINX Controller
+### 2. Install the Ingress NGINX Controller
 
 ```bash
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.12.0/deploy/static/provider/cloud/deploy.yaml
@@ -58,50 +58,50 @@ kubectl wait --namespace ingress-nginx \
   --timeout=120s
 ```
 
-### 3. Demarrer Oracle (Docker Compose)
+### 3. Start Oracle (Docker Compose)
 
 ```bash
 docker compose up -d
 ```
 
-Attendre qu'Oracle soit healthy (~2 minutes au premier lancement) :
+Wait for Oracle to be healthy (~2 minutes on first launch):
 
 ```bash
-docker compose ps   # oracle-xe doit etre "healthy"
+docker compose ps   # oracle-xe should be "healthy"
 ```
 
-### 4. Initialiser le schema Oracle
+### 4. Initialize the Oracle Schema
 
 ```bash
 docker exec -i oracle-xe sqlplus SYS/admin@//localhost:1521/XE as SYSDBA < backend/database/oracle_schema.sql
 ```
 
-### 5. Seed les donnees
+### 5. Seed the Data
 
 ```bash
 pip install oracledb requests
 python scripts/seed_oracle.py
 ```
 
-Cela insere :
-- 15 destinations (15 pays)
-- 30 packages (2 par pays : Explorer + Premium)
-- 150 hotels TripAdvisor avec photos et avis
+This inserts:
+- 15 destinations (15 countries)
+- 30 packages (2 per country: Explorer + Premium)
+- 150 TripAdvisor hotels with photos and reviews
 
-### 6. Builder les images Docker
+### 6. Build Docker Images
 
 ```bash
 docker build -t vacanceai-backend ./backend
 docker build -t vacanceai-frontend -f frontend/Dockerfile.prod ./frontend
 ```
 
-### 7. Deployer sur Kubernetes
+### 7. Deploy to Kubernetes
 
 ```bash
 kubectl apply -f k8s/
 ```
 
-Ou etape par etape :
+Or step by step:
 
 ```bash
 kubectl apply -f k8s/namespace.yaml
@@ -113,12 +113,12 @@ kubectl apply -f k8s/frontend.yaml
 kubectl apply -f k8s/ingress.yaml
 ```
 
-### 8. Verifier le deploiement
+### 8. Verify the Deployment
 
 ```bash
 kubectl get pods -n vacanceai
 
-# Resultat attendu :
+# Expected output:
 # NAME                        READY   STATUS    AGE
 # backend-xxx                 1/1     Running   ...
 # frontend-xxx                1/1     Running   ...
@@ -129,9 +129,9 @@ kubectl get pods -n vacanceai
 
 ## Configuration
 
-### Variables d'environnement (.env)
+### Environment Variables (.env)
 
-Creer un fichier `.env` a la racine du projet :
+Create a `.env` file at the project root:
 
 ```env
 ORACLE_HOST=localhost
@@ -145,26 +145,26 @@ JWT_ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=60
 REFRESH_TOKEN_EXPIRE_DAYS=30
 
-GOOGLE_API_KEY=<votre_cle_gemini>
+GOOGLE_API_KEY=<your_gemini_key>
 ```
 
-### Secrets Kubernetes (k8s/secrets.yaml)
+### Kubernetes Secrets (k8s/secrets.yaml)
 
-Encoder vos valeurs en base64 et les mettre dans `k8s/secrets.yaml` :
+Encode your values in base64 and add them to `k8s/secrets.yaml`:
 
 ```bash
-echo -n "votre-valeur" | base64
+echo -n "your-value" | base64
 ```
 
-Secrets requis :
-- `ORACLE_PWD` : mot de passe SYS Oracle (default: `admin`)
-- `ORACLE_PASSWORD` : mot de passe user VACANCEAI (default: `vacanceai`)
-- `JWT_SECRET_KEY` : cle secrete JWT
-- `GOOGLE_API_KEY` : cle API Google Gemini
+Required secrets:
+- `ORACLE_PWD`: Oracle SYS password (default: `admin`)
+- `ORACLE_PASSWORD`: VACANCEAI user password (default: `vacanceai`)
+- `JWT_SECRET_KEY`: JWT secret key
+- `GOOGLE_API_KEY`: Google Gemini API key
 
 ---
 
-## URLs disponibles
+## Available URLs
 
 | Service | URL |
 |---------|-----|
@@ -177,41 +177,41 @@ Secrets requis :
 
 ---
 
-## Commandes utiles
+## Useful Commands
 
 ### Docker Compose (Oracle)
 
 ```bash
-docker compose up -d          # Demarrer Oracle
-docker compose down            # Arreter Oracle
-docker compose logs -f oracle  # Logs Oracle
+docker compose up -d          # Start Oracle
+docker compose down            # Stop Oracle
+docker compose logs -f oracle  # Oracle logs
 ```
 
 ### Kubernetes (App)
 
 ```bash
-kubectl get pods -n vacanceai                        # Etat des pods
-kubectl logs -n vacanceai deploy/backend -f          # Logs backend
-kubectl logs -n vacanceai deploy/frontend -f         # Logs frontend
+kubectl get pods -n vacanceai                        # Pod status
+kubectl logs -n vacanceai deploy/backend -f          # Backend logs
+kubectl logs -n vacanceai deploy/frontend -f         # Frontend logs
 
-# Rebuild + redemarrer
+# Rebuild + restart
 docker build -t vacanceai-backend ./backend
 kubectl rollout restart deploy/backend -n vacanceai
 
 docker build -t vacanceai-frontend -f frontend/Dockerfile.prod ./frontend
 kubectl rollout restart deploy/frontend -n vacanceai
 
-# Sante
+# Health checks
 curl http://localhost/api/health
 curl http://localhost/api/ready
 
-# Tout supprimer
+# Delete everything
 kubectl delete -f k8s/
 ```
 
 ---
 
-## Developpement local (sans Docker/K8s)
+## Local Development (without Docker/K8s)
 
 ### Backend
 
@@ -221,7 +221,7 @@ python -m venv venv
 .\venv\Scripts\activate   # Windows
 pip install -r requirements.txt
 
-# Oracle doit tourner sur localhost:1521
+# Oracle must be running on localhost:1521
 uvicorn api.main:app --reload --port 8000
 # -> http://localhost:8000
 ```
@@ -239,41 +239,41 @@ npm run dev
 
 ## Logging
 
-Le backend dispose d'un systeme de logging centralise qui ecrit dans `backend/log_apps/`.
+The backend has a centralized logging system that writes to `backend/log_apps/`.
 
-| Fichier | Contenu | Niveau |
-|---------|---------|--------|
-| `app.log` | Logs generaux de l'application | INFO+ |
-| `agents.log` | Activite des agents IA (orchestrateur, UI, database) | DEBUG+ |
-| `sql.log` | Toutes les requetes SQL | DEBUG+ |
-| `errors.log` | Erreurs de tous les loggers | ERROR+ |
+| File | Content | Level |
+|------|---------|-------|
+| `app.log` | General application logs | INFO+ |
+| `agents.log` | AI agent activity (orchestrator, UI, database) | DEBUG+ |
+| `sql.log` | All SQL queries | DEBUG+ |
+| `errors.log` | Errors from all loggers | ERROR+ |
 
-- **Configuration** : `backend/logging_config.py` (`setup_logging()` appele au startup FastAPI)
-- **Rotation** : 5 MB max par fichier, 3 backups
-- **Volume K8s** : hostPath monte depuis le pod `/app/log_apps` vers `backend/log_apps/` local
+- **Configuration**: `backend/logging_config.py` (`setup_logging()` called at FastAPI startup)
+- **Rotation**: 5 MB max per file, 3 backups
+- **K8s volume**: hostPath mounted from pod `/app/log_apps` to local `backend/log_apps/`
 
 ```bash
-cat backend/log_apps/app.log      # Logs generaux
-cat backend/log_apps/sql.log      # Requetes SQL
-cat backend/log_apps/agents.log   # Agents IA
-cat backend/log_apps/errors.log   # Erreurs
+cat backend/log_apps/app.log      # General logs
+cat backend/log_apps/sql.log      # SQL queries
+cat backend/log_apps/agents.log   # AI agents
+cat backend/log_apps/errors.log   # Errors
 ```
 
 ---
 
 ## Troubleshooting
 
-### Backend ne demarre pas (readiness 503)
+### Backend not starting (readiness 503)
 
-Le readiness probe verifie la connexion Oracle. Verifier qu'Oracle tourne :
+The readiness probe checks the Oracle connection. Verify Oracle is running:
 
 ```bash
-docker compose ps   # oracle-xe doit etre "healthy"
+docker compose ps   # oracle-xe should be "healthy"
 ```
 
-### ErrImageNeverPull dans K8s
+### ErrImageNeverPull in K8s
 
-Les images Docker n'existent pas localement. Builder d'abord :
+Docker images don't exist locally. Build them first:
 
 ```bash
 docker build -t vacanceai-backend ./backend
@@ -281,12 +281,12 @@ docker build -t vacanceai-frontend -f frontend/Dockerfile.prod ./frontend
 kubectl rollout restart deploy/backend deploy/frontend -n vacanceai
 ```
 
-### Reset complet
+### Full Reset
 
 ```bash
 kubectl delete -f k8s/
 docker compose down
 docker volume create oracle-xe-data
 docker compose up -d
-# Attendre healthy, puis re-seed et re-deployer
+# Wait for healthy, then re-seed and re-deploy
 ```

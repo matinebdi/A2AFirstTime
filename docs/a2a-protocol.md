@@ -1,39 +1,39 @@
-# Protocole Agent-to-Agent (A2A) - VacanceAI
+# Agent-to-Agent Protocol (A2A) - VacanceAI
 
-Le backend utilise le protocole Agent-to-Agent (A2A) de Google pour la coordination des agents IA.
+The backend uses Google's Agent-to-Agent (A2A) protocol for AI agent coordination.
 
 ---
 
 ## Agents
 
-| Agent | Role | Technologie |
-|-------|------|-------------|
-| **Orchestrator** | Coordonne les autres agents, route les messages | LangGraph |
-| **Database** | Execute les requetes Oracle | LangChain tools |
-| **UI** | Actions d'interface utilisateur (recherche, reservation, navigation) | ReAct + MemorySaver |
+| Agent | Role | Technology |
+|-------|------|------------|
+| **Orchestrator** | Coordinates other agents, routes messages | LangGraph |
+| **Database** | Executes Oracle queries | LangChain tools |
+| **UI** | User interface actions (search, booking, navigation) | ReAct + MemorySaver |
 
 ---
 
-## Endpoints A2A
+## A2A Endpoints
 
-| Methode | Endpoint | Description |
-|---------|----------|-------------|
-| GET | `/.well-known/agent.json` | Agent Card (metadonnees de l'agent) |
-| POST | `/a2a/tasks` | Creer une nouvelle tache |
-| GET | `/a2a/tasks/{id}` | Recuperer le statut d'une tache |
-| POST | `/a2a/tasks/{id}/messages` | Envoyer un message a une tache |
-| POST | `/a2a/tasks/{id}/cancel` | Annuler une tache en cours |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/.well-known/agent.json` | Agent Card (agent metadata) |
+| POST | `/a2a/tasks` | Create a new task |
+| GET | `/a2a/tasks/{id}` | Retrieve task status |
+| POST | `/a2a/tasks/{id}/messages` | Send a message to a task |
+| POST | `/a2a/tasks/{id}/cancel` | Cancel a running task |
 
 ---
 
 ## Agent Card
 
-L'Agent Card est un document JSON expose a `/.well-known/agent.json` qui decrit les capacites de l'agent :
+The Agent Card is a JSON document exposed at `/.well-known/agent.json` that describes the agent's capabilities:
 
 ```json
 {
   "name": "VacanceAI Assistant",
-  "description": "Assistant IA pour la reservation de vacances",
+  "description": "AI assistant for vacation booking",
   "capabilities": ["search", "booking", "navigation", "recommendations"],
   "protocol_version": "1.0"
 }
@@ -41,21 +41,21 @@ L'Agent Card est un document JSON expose a `/.well-known/agent.json` qui decrit 
 
 ---
 
-## Flux de communication
+## Communication Flow
 
-![Diagramme Agent IA](sc/Mermaid%20Chart%20-%20Create%20complex,%20visual%20diagrams%20with%20text.-2026-02-13-090149.png)
+![AI Agent Diagram](sc/Mermaid%20Chart%20-%20Create%20complex,%20visual%20diagrams%20with%20text.-2026-02-13-090149.png)
 
-1. Le message utilisateur arrive via WebSocket
-2. L'orchestrateur classifie le message et le route vers l'agent adapte
-3. L'agent execute ses outils et retourne une reponse
-4. Les `ui_actions` sont renvoyees au frontend pour execution
+1. The user message arrives via WebSocket
+2. The orchestrator classifies the message and routes it to the appropriate agent
+3. The agent executes its tools and returns a response
+4. The `ui_actions` are sent back to the frontend for execution
 
 ---
 
-## Fichiers
+## Files
 
-| Fichier | Description |
-|---------|-------------|
-| `backend/a2a/protocol.py` | Schemas Pydantic du protocole A2A |
-| `backend/a2a/client.py` | Client A2A (pour appeler d'autres agents) |
-| `backend/a2a/server.py` | Serveur A2A (expose les endpoints) |
+| File | Description |
+|------|-------------|
+| `backend/a2a/protocol.py` | Pydantic schemas for the A2A protocol |
+| `backend/a2a/client.py` | A2A client (for calling other agents) |
+| `backend/a2a/server.py` | A2A server (exposes endpoints) |

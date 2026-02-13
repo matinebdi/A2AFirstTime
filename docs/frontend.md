@@ -1,6 +1,6 @@
 # Frontend - VacanceAI
 
-Application React 18 avec TypeScript, Vite, Tailwind CSS et Framer Motion.
+React 18 application with TypeScript, Vite, Tailwind CSS, and Framer Motion.
 
 ---
 
@@ -8,98 +8,98 @@ Application React 18 avec TypeScript, Vite, Tailwind CSS et Framer Motion.
 
 | Route | Page | Description |
 |-------|------|-------------|
-| `/` | Home | Accueil avec hero carousel Ken Burns + packages populaires |
-| `/search` | Search | Recherche avec filtres (prix, duree, tags, pagination, URL state) |
-| `/packages/:id` | PackageDetail | Details d'un package + formulaire reservation |
-| `/hotels` | Hotels | Hotels TripAdvisor (grille 3 colonnes, tilt 3D) |
-| `/hotels/:locationId` | HotelDetail | Details hotel + galerie photos + avis progressifs |
-| `/favorites` | Favorites | Mes favoris (packages sauvegardes) |
-| `/bookings` | Bookings | Mes reservations (AG Grid avec tri/filtre/pagination) |
-| `/profile` | Profile | Profil utilisateur + upload avatar |
-| `/login` | Login | Connexion |
-| `/signup` | SignUp | Inscription |
+| `/` | Home | Landing page with Ken Burns hero carousel + popular packages |
+| `/search` | Search | Search with filters (price, duration, tags, pagination, URL state) |
+| `/packages/:id` | PackageDetail | Package details + booking form |
+| `/hotels` | Hotels | TripAdvisor hotels (3-column grid, 3D tilt) |
+| `/hotels/:locationId` | HotelDetail | Hotel details + photo gallery + progressive review reveal |
+| `/favorites` | Favorites | Saved packages (user's favorites) |
+| `/bookings` | Bookings | User's bookings (AG Grid with sort/filter/pagination) |
+| `/profile` | Profile | User profile + avatar upload |
+| `/login` | Login | Sign in |
+| `/signup` | SignUp | Registration |
 
 ---
 
-## Composants principaux
+## Main Components
 
 ### Layout (`components/Layout.tsx`)
-Structure commune a toutes les pages :
-- `AnimatedBackground` : fond Ken Burns plein ecran (5 images, crossfade, fixed)
-- `Header` : barre de navigation avec glass effect (`bg-white/80 backdrop-blur-md`)
-- `AnimatePresence mode="wait"` : transitions de page animees
-- `Footer` : pied de page (`bg-gray-900/95 backdrop-blur-sm`)
+Common structure for all pages:
+- `AnimatedBackground`: full-screen Ken Burns background (5 images, crossfade, fixed)
+- `Header`: navigation bar with glass effect (`bg-white/80 backdrop-blur-md`)
+- `AnimatePresence mode="wait"`: animated page transitions
+- `Footer`: footer (`bg-gray-900/95 backdrop-blur-sm`)
 
 ### ChatWidget (`components/chat/ChatWidget.tsx`)
-Widget de chat flottant en bas a droite :
-- Communication WebSocket temps reel
-- Lit le `PageContext` et l'envoie avec chaque message
-- Gere les `ui_actions` retournees par l'agent (navigation, affichage de cartes)
-- Navigation automatique apres booking (`/bookings`) et favori (`/favorites`)
+Floating chat widget in the bottom-right corner:
+- Real-time WebSocket communication
+- Reads `PageContext` and sends it with every message
+- Handles `ui_actions` returned by the agent (navigation, card display)
+- Automatic navigation after booking (`/bookings`) and favorite (`/favorites`)
 
 ### PackageCard (`components/packages/PackageCard.tsx`)
-Carte d'affichage d'un package vacances :
-- Effet tilt 3D avec `react-parallax-tilt` (tiltMax 8, glare 0.15, scale 1.02)
-- Affiche image, nom, destination, prix, duree, rating
+Vacation package display card:
+- 3D tilt effect with `react-parallax-tilt` (tiltMax 8, glare 0.15, scale 1.02)
+- Displays image, name, destination, price, duration, rating
 
 ### Animations (`components/animations/`)
 
-| Composant | Description |
+| Component | Description |
 |-----------|-------------|
-| `FadeIn` | Scroll reveal wrapper (direction, delay, duration) avec `whileInView` |
-| `StaggerContainer` + `StaggerItem` | Animations echelonnees pour listes/grilles |
-| `PageTransition` | Animation d'entree de page (opacity + y) |
-| `HeroCarousel` | Carousel Ken Burns (4 images Unsplash, crossfade, zoom/pan) |
+| `FadeIn` | Scroll reveal wrapper (direction, delay, duration) with `whileInView` |
+| `StaggerContainer` + `StaggerItem` | Staggered animations for lists/grids |
+| `PageTransition` | Page entry animation wrapper (opacity + y) |
+| `HeroCarousel` | Ken Burns carousel (4 Unsplash images, crossfade, zoom/pan) |
 | `AnimatedButton` + `AnimatedLinkButton` | Hover scale+glow, tap scale, spring transition |
-| `AnimatedBackground` | Fond Ken Burns plein ecran (5 images, overlay blanc/80 + backdrop-blur) |
+| `AnimatedBackground` | Full-screen Ken Burns background (5 images, white/80 overlay + backdrop-blur) |
 
-### Recherche (`components/search/`)
+### Search (`components/search/`)
 
-| Composant | Description |
+| Component | Description |
 |-----------|-------------|
-| `DualRangeSlider` | Slider double pour prix et duree |
-| `TagFilter` | Selection de tags de filtrage |
-| `ActiveFilters` | Badges des filtres actifs |
-| `Pagination` | Navigation entre pages de resultats |
+| `DualRangeSlider` | Dual slider for price and duration |
+| `TagFilter` | Tag selection filter |
+| `ActiveFilters` | Active filter badges |
+| `Pagination` | Results page navigation |
 
 ---
 
 ## Contexts
 
 ### AuthContext (`contexts/AuthContext.tsx`)
-Gestion de l'authentification JWT :
-- Tokens stockes dans `localStorage`
-- Expose : `user`, `login()`, `logout()`, `signup()`, `refreshToken()`
+JWT authentication management:
+- Tokens stored in `localStorage`
+- Exposes: `user`, `login()`, `logout()`, `signup()`, `refreshToken()`
 
 ### PageContext (`contexts/PageContext.tsx`)
-Contexte de page pour l'agent IA :
-- `PageContextProvider` : wraps l'application
-- `usePageContext()` : lit le contexte courant
-- `useSetPageContext()` : met a jour le contexte (appele dans chaque page)
-- Donnees : page courante, route, donnees affichees
+Page context for the AI agent:
+- `PageContextProvider`: wraps the application
+- `usePageContext()`: reads the current context
+- `useSetPageContext()`: updates the context (called in each page)
+- Data: current page, route, displayed data
 
 ---
 
 ## Services
 
 ### API Client (`services/api.ts`)
-Client REST pour le backend :
-- `authApi` : signup, login, logout, refresh, me, updateProfile, uploadAvatar
-- `packagesApi` : list, featured, getById, checkAvailability
-- `bookingsApi` : list, create, update, delete
-- `favoritesApi` : list, add, remove, check
-- `reviewsApi` : getByPackage, create
-- `destinationsApi` : list, getById, getPackages
-- `conversationsApi` : create, get, sendMessage, delete
-- `tripadvisorApi` : getLocations, getLocationsWithDetails, getCountries, getById, getPhotos, getReviews
+REST client for the backend:
+- `authApi`: signup, login, logout, refresh, me, updateProfile, uploadAvatar
+- `packagesApi`: list, featured, getById, checkAvailability
+- `bookingsApi`: list, create, update, delete
+- `favoritesApi`: list, add, remove, check
+- `reviewsApi`: getByPackage, create
+- `destinationsApi`: list, getById, getPackages
+- `conversationsApi`: create, get, sendMessage, delete
+- `tripadvisorApi`: getLocations, getLocationsWithDetails, getCountries, getById, getPhotos, getReviews
 
 ### Hooks
 
-- `useChat` (`hooks/useChat.ts`) : hook WebSocket pour le chat (connexion, envoi, reception, reconnexion)
+- `useChat` (`hooks/useChat.ts`): WebSocket hook for chat (connection, send, receive, reconnect)
 
 ---
 
-## Structure des fichiers
+## File Structure
 
 ```
 frontend/src/
@@ -156,10 +156,10 @@ frontend/src/
 
 ---
 
-## Notes techniques
+## Technical Notes
 
-- **Glass effect** : toutes les cartes et panels utilisent `bg-white/90 backdrop-blur-sm`
-- **TypeScript** : `ease: 'easeOut' as const` necessaire pour les variants Framer Motion
-- **React gotcha** : `{num && <JSX>}` affiche "0" quand num=0, utiliser `{num > 0 && <JSX>}` a la place
-- **Photos** : `getPhotoUrl` priorise `url_large` sur `url_medium` pour la qualite
-- **Hotels** : single API call (`getLocationsWithDetails`) au lieu de N+1 requetes
+- **Glass effect**: all cards and panels use `bg-white/90 backdrop-blur-sm`
+- **TypeScript**: `ease: 'easeOut' as const` required for Framer Motion variant types
+- **React gotcha**: `{num && <JSX>}` renders "0" when num=0, use `{num > 0 && <JSX>}` instead
+- **Photos**: `getPhotoUrl` prioritizes `url_large` over `url_medium` for quality
+- **Hotels**: single API call (`getLocationsWithDetails`) instead of N+1 queries
