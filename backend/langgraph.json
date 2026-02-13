@@ -1,0 +1,9 @@
+{
+  "dependencies": ["./requirements.txt"],
+  "graphs": {
+    "orchestrator": "agents.orchestrator.agent:orchestrator_agent",
+    "ui_agent": "agents.studio:ui_agent",
+    "database_agent": "agents.studio:database_agent"
+  },
+  "env": "../.env"
+}

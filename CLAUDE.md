@@ -25,6 +25,7 @@ Kubernetes (namespace: vacanceai)
     /api/* -> backend:8000
     /*     -> frontend:80 (nginx)
   Jaeger (traces) -> :16686 (NodePort 31686)
+  LangGraph Studio -> :2024 (NodePort 32024, Cloudflare Tunnel)
 
 Docker Compose
   Oracle 21c XE -> localhost:1521/XE
@@ -49,6 +50,7 @@ docker compose up -d
 # Build images
 docker build -t vacanceai-backend ./backend
 docker build -t vacanceai-frontend -f frontend/Dockerfile.prod ./frontend
+docker build -t vacanceai-langgraph -f backend/Dockerfile.langgraph backend
 
 # Deploy to Kubernetes
 kubectl apply -f k8s/
@@ -56,6 +58,7 @@ kubectl apply -f k8s/
 # Restart after code changes
 docker build -t vacanceai-backend ./backend && kubectl rollout restart deploy/backend -n vacanceai
 docker build -t vacanceai-frontend -f frontend/Dockerfile.prod ./frontend && kubectl rollout restart deploy/frontend -n vacanceai
+docker build -t vacanceai-langgraph -f backend/Dockerfile.langgraph backend && kubectl rollout restart deploy/langgraph-studio -n vacanceai
 
 # View logs (kubectl)
 kubectl logs -n vacanceai deploy/backend -f
@@ -81,6 +84,8 @@ cd frontend && npm install && npm run dev
 - **Swagger**: http://localhost/swagger
 - **ReDoc**: http://localhost/redoc
 - **Jaeger UI**: http://localhost:31686
+- **LangGraph Studio**: https://smith.langchain.com/studio/?baseUrl=<TUNNEL_URL> (see pod logs for Cloudflare URL)
+- **LangGraph API (local)**: http://localhost:32024
 - **Oracle**: localhost:1521/XE
 
 ### URLs (Local dev)
@@ -131,8 +136,12 @@ backend/
 │   ├── agents.log              # AI agent activity (DEBUG+)
 │   ├── sql.log                 # All SQL queries (DEBUG+)
 │   └── errors.log              # Errors only (ERROR+)
+├── agents/
+│   └── studio.py               # Graph exports for LangGraph Studio (no custom checkpointers)
 ├── config.py                   # Settings (pydantic-settings)
 ├── telemetry.py                # OpenTelemetry setup
+├── langgraph.json              # LangGraph Studio config (3 graphs: orchestrator, ui_agent, database_agent)
+├── Dockerfile.langgraph        # LangGraph Studio image (langgraph-cli[inmem] + Cloudflare tunnel)
 ├── requirements.txt
 └── Dockerfile
 ```
@@ -274,6 +283,17 @@ frontend/src/
 - `navigate_to_page` - Navigate frontend to a page
 - `show_recommendations` - Show personalized recommendations
 
+### LangGraph Studio
+- **Image**: `vacanceai-langgraph:latest` (Dockerfile.langgraph)
+- **Runtime**: `langgraph-cli[inmem]` (in-memory, dev mode)
+- **Config**: `backend/langgraph.json` (3 graphs: orchestrator, ui_agent, database_agent)
+- **Graph exports**: `backend/agents/studio.py` (re-creates agents without custom checkpointers)
+- **K8s**: Deployment `langgraph-studio` + NodePort Service (32024)
+- **Tunnel**: Cloudflare Tunnel auto-created when `LANGSMITH_API_KEY` is set
+- **Access**: `https://smith.langchain.com/studio/?baseUrl=<TUNNEL_URL>` (tunnel URL in pod logs)
+- **Auth**: `LANGSMITH_API_KEY` required (not `LANGCHAIN_API_KEY`) for tunnel authentication
+- **Rebuild**: `docker build -t vacanceai-langgraph -f backend/Dockerfile.langgraph backend`
+
 ## API Endpoints
 
 ### Auth
@@ -316,10 +336,10 @@ frontend/src/
 ## Kubernetes
 
 - **Namespace**: `vacanceai`
-- **Deployments**: backend, frontend, jaeger
-- **Services**: ClusterIP for all, NodePort for jaeger-external
+- **Deployments**: backend, frontend, jaeger, langgraph-studio
+- **Services**: ClusterIP for all, NodePort for jaeger-external and langgraph-studio
 - **Ingress**: NGINX with WebSocket support (proxy-read-timeout: 3600s)
-- **Images**: `vacanceai-backend:latest`, `vacanceai-frontend:latest` (imagePullPolicy: Never)
+- **Images**: `vacanceai-backend:latest`, `vacanceai-frontend:latest`, `vacanceai-langgraph:latest` (imagePullPolicy: Never)
 - **Config**: `k8s/configmap.yaml` (env vars), `k8s/secrets.yaml` (credentials, gitignored)
 - **Volumes**: backend has hostPath mount for `log_apps/` (logs visible locally)
 
@@ -349,4 +369,8 @@ ORACLE_USER=VACANCEAI
 ORACLE_PASSWORD=vacanceai
 JWT_SECRET_KEY=your-secret-key
 GOOGLE_API_KEY=your-gemini-api-key
+LANGCHAIN_API_KEY=your-langsmith-api-key    # LangSmith tracing
+LANGSMITH_API_KEY=your-langsmith-api-key    # LangGraph Studio tunnel auth (same key)
+LANGCHAIN_TRACING_V2=true
+LANGCHAIN_PROJECT=VacanceAI
 ```

@@ -25,7 +25,8 @@ A full-stack vacation booking application with an AI assistant, TripAdvisor inte
 | **Database** | Oracle 21c XE (SQLAlchemy ORM + oracledb) |
 | **AI** | Google Gemini 2.0 Flash (LangChain + LangGraph) |
 | **Auth** | Custom JWT (PyJWT + passlib bcrypt) |
-| **Observability** | OpenTelemetry, Jaeger |
+| **Observability** | OpenTelemetry, Jaeger, LangSmith |
+| **AI Studio** | LangGraph Studio (Cloudflare Tunnel) |
 | **Logging** | RotatingFileHandler (app, agents, sql, errors) |
 | **Containerization** | Docker Compose (DB) + Kubernetes (app) |
 
@@ -97,6 +98,8 @@ docker volume create oracle-xe-data
 | Frontend | http://localhost |
 | Swagger | http://localhost/swagger |
 | Jaeger UI | http://localhost:31686 |
+| LangGraph Studio | https://smith.langchain.com/studio/?baseUrl=\<TUNNEL_URL\> |
+| LangSmith | https://smith.langchain.com |
 
 ---
 

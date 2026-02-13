@@ -67,6 +67,17 @@ Oracle database in a Docker container (separate from Kubernetes):
 - K8s backend connects via `host.docker.internal:1521`
 - Thin oracledb mode (no Oracle Instant Client required)
 
+#### LangGraph Studio (:2024)
+
+LangGraph development server for visual agent debugging:
+- Runs `langgraph-cli[inmem]` in dev mode
+- Exposes 3 graphs: orchestrator, ui_agent, database_agent
+- Cloudflare Tunnel auto-created for LangSmith Studio web access
+- NodePort 32024 for local API access
+- Requires `LANGSMITH_API_KEY` for tunnel authentication
+- Graph exports in `backend/agents/studio.py` (agents without custom checkpointers)
+- Config: `backend/langgraph.json`
+
 ### Google Gemini 2.0 Flash
 
 External AI service (Google API):
@@ -101,6 +112,7 @@ External AI service (Google API):
 | `k8s/backend.yaml` | Deployment + Service | FastAPI backend |
 | `k8s/frontend.yaml` | Deployment + Service | React/nginx frontend |
 | `k8s/jaeger.yaml` | Deployment + Service + NodePort | Jaeger traces |
+| `k8s/langgraph-studio.yaml` | Deployment + Service (NodePort 32024) | LangGraph Studio |
 | `k8s/ingress.yaml` | Ingress | NGINX routing |
 
 ---
@@ -114,4 +126,6 @@ External AI service (Google API):
 | Swagger | http://localhost/swagger | Ingress |
 | ReDoc | http://localhost/redoc | Ingress |
 | Jaeger UI | http://localhost:31686 | NodePort |
+| LangGraph Studio | https://smith.langchain.com/studio/?baseUrl=\<TUNNEL_URL\> | Cloudflare Tunnel |
+| LangGraph API | http://localhost:32024 | NodePort |
 | Oracle | localhost:1521/XE | Docker Compose |

@@ -121,6 +121,35 @@ After `add_favorite`, the ChatWidget also calls `favoritesApi.add()` to persist 
 
 ---
 
+## LangGraph Studio
+
+LangGraph Studio provides a visual interface for debugging and testing agents via [LangSmith](https://smith.langchain.com).
+
+### Setup
+
+- **Image**: `vacanceai-langgraph:latest` (`backend/Dockerfile.langgraph`)
+- **Runtime**: `langgraph-cli[inmem]` in dev mode with Cloudflare Tunnel
+- **Config**: `backend/langgraph.json` defines 3 graphs:
+  - `orchestrator` - Main coordinator agent
+  - `ui_agent` - UI interaction agent (without custom checkpointer)
+  - `database_agent` - Database query agent (without custom checkpointer)
+- **Graph exports**: `backend/agents/studio.py` re-creates agents without custom checkpointers (LangGraph API handles persistence internally)
+
+### Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `LANGCHAIN_API_KEY` | LangSmith API key (tracing) |
+| `LANGSMITH_API_KEY` | LangGraph Studio tunnel auth (same key as LANGCHAIN_API_KEY) |
+
+### Access
+
+1. Deploy: `kubectl apply -f k8s/langgraph-studio.yaml`
+2. Get tunnel URL from pod logs: `kubectl logs -n vacanceai deploy/langgraph-studio | grep trycloudflare`
+3. Open: `https://smith.langchain.com/studio/?baseUrl=<TUNNEL_URL>`
+
+---
+
 ## Key Files
 
 | File | Description |
@@ -134,3 +163,7 @@ After `add_favorite`, the ChatWidget also calls `favoritesApi.add()` to persist 
 | `frontend/src/contexts/PageContext.tsx` | React Context for current page |
 | `frontend/src/components/chat/ChatWidget.tsx` | Chat widget (WebSocket + PageContext) |
 | `backend/api/routes/conversations.py` | WebSocket + REST route for chat |
+| `backend/agents/studio.py` | Graph exports for LangGraph Studio (no custom checkpointers) |
+| `backend/langgraph.json` | LangGraph Studio config (3 graphs) |
+| `backend/Dockerfile.langgraph` | LangGraph Studio Docker image |
+| `k8s/langgraph-studio.yaml` | K8s deployment + NodePort service |

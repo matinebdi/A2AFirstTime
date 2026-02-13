@@ -53,6 +53,11 @@ spec:
                 secretKeyRef:
                   name: vacanceai-secrets
                   key: GOOGLE_API_KEY
+            - name: LANGCHAIN_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: vacanceai-secrets
+                  key: LANGCHAIN_API_KEY
           volumeMounts:
             - name: log-apps
               mountPath: /app/log_apps

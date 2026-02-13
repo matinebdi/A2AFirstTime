@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: langgraph-studio
+  namespace: vacanceai
+  labels:
+    app: langgraph-studio
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: langgraph-studio
+  template:
+    metadata:
+      labels:
+        app: langgraph-studio
+    spec:
+      containers:
+        - name: langgraph-studio
+          image: vacanceai-langgraph:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 2024
+          envFrom:
+            - configMapRef:
+                name: vacanceai-config
+          env:
+            - name: ORACLE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: vacanceai-secrets
+                  key: ORACLE_PASSWORD
+            - name: JWT_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: vacanceai-secrets
+                  key: JWT_SECRET_KEY
+            - name: GOOGLE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: vacanceai-secrets
+                  key: GOOGLE_API_KEY
+            - name: LANGCHAIN_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: vacanceai-secrets
+                  key: LANGCHAIN_API_KEY
+            - name: LANGSMITH_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: vacanceai-secrets
+                  key: LANGCHAIN_API_KEY
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "200m"
+            limits:
+              memory: "512Mi"
+              cpu: "1000m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: langgraph-studio
+  namespace: vacanceai
+spec:
+  type: NodePort
+  selector:
+    app: langgraph-studio
+  ports:
+    - port: 2024
+      targetPort: 2024
+      nodePort: 32024

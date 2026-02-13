@@ -19,3 +19,7 @@ data:
   FRONTEND_URL: "http://localhost"
   DEBUG: "false"
   LOG_LEVEL: "INFO"
+  # LangSmith
+  LANGCHAIN_TRACING_V2: "true"
+  LANGCHAIN_PROJECT: "VacanceAI"
+  LANGCHAIN_ENDPOINT: "https://api.smith.langchain.com"
