@@ -6,7 +6,9 @@
 
 ---
 
-## Bounded Contexts
+## Bounded Contexts & Context Map
+
+![Context Map](sc/Mermaid%20Chart%20-%20Create%20complex,%20visual%20diagrams%20with%20text.-2026-02-13-091721.png)
 
 | Context | Entites | Description |
 |---------|---------|-------------|
